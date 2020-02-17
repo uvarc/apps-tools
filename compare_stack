@@ -1,0 +1,47 @@
+#!/bin/bash
+# compare two apps trees
+# Ruoshi Sun
+# 2020-02-12
+
+module purge
+ml gcc/7.1.0 tree
+
+STACK1=201912
+STACK2=202003
+DIR=~/tree
+
+function stack_diff {
+    CATEGORY=$1
+    DEPTH=$2
+    TREE1=tree-${STACK1}-${CATEGORY}.txt
+    TREE2=tree-${STACK2}-${CATEGORY}.txt
+    APPDIR1=/sfs/applications/$STACK1/software/standard
+    APPDIR2=/sfs/applications/$STACK2/software/standard
+
+    cd $APPDIR1/$CATEGORY
+    tree -df -L $DEPTH . | sed 's/^.....//' > $DIR/$TREE1
+    cd $APPDIR2/$CATEGORY
+    tree -df -L $DEPTH . | sed 's/^.....//' > $DIR/$TREE2
+
+    diff <(parse $DIR/$TREE1) <(parse $DIR/$TREE2) > $DIR/tree-${STACK1}-${STACK2}-${CATEGORY}.txt
+}
+
+function parse {
+    FILE=$1
+    sed 's/[^0-9a-zA-Z_\-\.\/]*//g' $FILE
+}
+
+# core
+stack_diff core       2
+
+# compiler
+stack_diff compiler   4
+
+# mpi
+stack_diff mpi        6
+
+# toolchains
+stack_diff toolchains 2
+
+# container
+stack_diff container  4

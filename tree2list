@@ -1,0 +1,22 @@
+#!/bin/bash
+# Steps:
+# 1. (manual) copy "tree-..." to "list-..."
+# 2. (manual) delete superfluous lines
+# 3. run this script
+# Ruoshi Sun
+# 2020-02-12
+
+if [ $# -ne 1 ]; then
+    echo "Usage: `basename $0` core|compiler|mpi|toolchains|container"
+    exit 1
+fi
+
+CATEGORY=$1
+STACK1=201912
+STACK2=202003
+DIR=~/tree
+
+sed -i -e '/^[^><]/d' \
+    -e 's/^>/\+ /g' \
+    -e 's/^</\- /g' \
+    $DIR/list-${STACK1}-${STACK2}-${CATEGORY}.txt

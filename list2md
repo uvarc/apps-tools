@@ -1,0 +1,16 @@
+#!/bin/bash
+# combine 5 lists and convert into markdown
+# Ruoshi Sun
+# 2020-02-12
+
+STACK1=201912
+STACK2=202003
+DIR=~/tree
+
+for i in core compiler mpi toolchains container; do
+    echo "#### $i"
+    echo "\`\`\`bash"
+    cat $DIR/list-${STACK1}-${STACK2}-$i.txt
+    echo "\`\`\`"
+    echo
+done
