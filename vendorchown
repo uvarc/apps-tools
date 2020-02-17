@@ -1,0 +1,92 @@
+#!/bin/bash
+# Ruoshi Sun
+# 2019-12-18
+#
+# Change group ownership for vendor software as per
+# https://docs.hpc.virginia.edu/wiki/applications/Vendor_Application_Group_Ownerships/Vendor_Application_Group_Ownerships
+
+if [ $# -ne 1 ]; then
+    echo "Usage: `basename $0` YYYYMM"
+    exit 1
+fi
+
+# Perform chown on production only, not on build
+if [[ $1 =~ "build" ]]; then
+    echo "Perform chown on production only. Do not chown on build!"
+    exit 1
+fi
+
+DIR="/drbd/applications/$1/software/vendor"
+
+if [ ! -e $DIR ]; then
+    echo "Error: $DIR not found"
+    exit 1
+fi
+
+# GID
+febio=29524
+gaussian=911
+gaussian_students=29345
+gaussian_grads=29895
+gurobi=24717
+users=100
+uvacse=409878
+vasp=30065
+vasp_students=29969
+
+function print_status {
+    if [ $? -eq 0 ]; then
+        echo -e "\u2705"
+    else
+        echo -e "\u274c"
+    fi
+}
+
+function chown_dir {
+    if [ $# -ne 4 ]; then
+        echo "Error: chown_dir needs 4 arguments"
+        echo "chown_dir USER GROUP DIR 0/1"
+        echo "0: not recursive (for top-level directory)"
+        echo "1: recursive"
+        exit 1
+    fi
+
+    USER=$1
+    GROUP=$2
+    CHOWNDIR=$3
+
+    if [ ! -e $CHOWNDIR ]; then
+        echo "Error: $CHOWNDIR not found"
+        exit 1
+    fi
+
+    if [ $4 -eq 1 ]; then
+        echo -n "chown -R ${USER}:${GROUP} $CHOWNDIR "
+        chown -R ${USER}:${GROUP} $CHOWNDIR
+        print_status
+    else
+        echo -n "chown ${USER}:${GROUP} $CHOWNDIR "
+        chown ${USER}:${GROUP} $CHOWNDIR
+        print_status
+    fi
+}
+
+# vendor chown begins here
+cd $DIR
+
+# febio
+chown_dir $uvacse $febio             febio              1
+
+# gaussian
+chown_dir $uvacse $users             gaussian           0
+chown_dir $uvacse $gaussian          gaussian/research  1
+chown_dir $uvacse $gaussian_students gaussian/education 1
+chown_dir $uvacse $gaussian_grads    gaussian/grads     1
+
+# gurobi
+chown_dir $uvacse $gurobi            gurobi             1
+
+# vasp
+chown_dir $uvacse $users             vasp               0
+chown_dir $uvacse $vasp              vasp/5.4.4         1
+chown_dir $uvacse $vasp_students     vasp/vasp-students 1
