@@ -1,0 +1,160 @@
+#!/bin/bash
+# Remove app
+#
+# Ruoshi Sun
+# 2020-02-13
+
+APPDIR="/sfs/applications"
+SOFTWARE="software"
+MODFILE="modulefiles"
+
+function print_usage {
+	echo "Usage: `basename $0` \"YYYYMM list\" CATEGORY [...] SOFTWARE/VERSION"
+	echo "       `basename $0` \"YYYYMM list\" core       SOFTWARE/VERSION"
+	echo "       `basename $0` \"YYYYMM list\" toolchains SOFTWARE/VERSION"
+	echo "       `basename $0` \"YYYYMM list\" compiler   COMPILER/VERSION SOFTWARE/VERSION"
+	echo "       `basename $0` \"YYYYMM list\" mpi        COMPILER/VERSION MPI_NAME/VERSION SOFTWARE/VERSION"
+	echo "       `basename $0` \"YYYYMM list\" container  singularity/VERSION SOFTWARE/VERSION"
+	echo
+	echo "Example: `basename $0` 202003 core java/1.12.0"
+	echo "         `basename $0` \"202003_build 202003\" mpi gcc/7.1.0 openmpi/3.1.0 metis/5.1.0"
+}
+
+function print_error {
+	RED='\e[1;31m'
+	NC='\e[m'
+	echo -e "${RED}Error: $1${NC}"
+	echo
+	print_usage
+	exit 1
+}
+
+function recursive_rmdir {
+# remove empty directory
+    while [ ! "$(ls -A .)" ] ; do
+        dir=$(basename `pwd`)
+        cd ..
+        echo "empty directory $dir"
+        rmdir $dir
+    done
+}
+
+# must have at least 3 arguments
+NARGS=$#
+if [ $NARGS -lt 3 ]; then
+	print_usage
+	exit 0
+fi
+
+if [ ! -e $APPDIR ]; then
+    print_error "$APPDIR not found. Please update $0."
+fi
+
+# store list of YYYYMMs
+YYYYMMs=$1
+shift
+
+# loop over YYYYMM
+for YYYYMM in $YYYYMMs; do
+    echo "[$YYYYMM]"
+
+# parse args
+    case $1 in
+    core|toolchains)
+        if [ $NARGS -ne 3 ]; then
+            print_error "incorrect number of arguments."
+        fi
+        PREFIX="standard/$1"
+        DIR=$2
+        ;;
+    compiler|container)
+        if [ $NARGS -ne 4 ]; then
+            print_error "incorrect number of arguments."
+        fi
+        PREFIX="standard/$1/$2"
+        if [ ! -e $APPDIR/$YYYYMM/$SOFTWARE/standard/$1/$2 ]; then
+            print_error "$1 $2 not found in $YYYYMM."
+        fi
+        DIR=$3
+        ;;
+    mpi)
+        if [ $NARGS -ne 5 ]; then
+            print_error "incorrect number of arguments."
+        fi
+        PREFIX="standard/$1/$2/$3"
+        if [ ! -e $APPDIR/$YYYYMM/$SOFTWARE/standard/$1/$2 ]; then
+            print_error "compiler $2 not found in $YYYYMM."
+        fi
+        if [ ! -e $APPDIR/$YYYYMM/$SOFTWARE/standard/$1/$2/$3 ]; then
+            print_error "$1 $3 not found in $YYYYMM."
+        fi
+        DIR=$4
+        ;;
+    *)
+        print_error "invalid category $1."
+        ;;
+    esac
+
+    SOFTWARE_PATH=$APPDIR/$YYYYMM/$SOFTWARE/$PREFIX/$DIR
+    EBFILE="$SOFTWARE_PATH/easybuild/*.eb"
+
+# check if installation is complete
+    VERSION=`basename $DIR`
+    if [ ! -e $EBFILE ]; then
+        echo "$EBFILE not found. Perhaps due to incomplete installation."
+    else
+# test for hidden module
+        if grep -q "^hidden\s*=\s*True" $EBFILE; then
+            VERSION=".$VERSION"
+        fi
+    fi
+
+# module files are not stored in separate version directories
+    MODFILE_PATH="$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$DIR"
+    MODFILE_PATH="${MODFILE_PATH%/*}"
+
+# check paths of software and module file
+    for i in $SOFTWARE_PATH $MODFILE_PATH; do
+        if [ ! -e $i ]; then
+            print_error "$i not found."
+        fi
+    done
+
+# begin removal process
+    echo "== To be removed"
+    echo "Software:"
+    echo $SOFTWARE_PATH
+    ls -A $SOFTWARE_PATH
+    echo 
+    echo "Module file:"
+    echo $MODFILE_PATH
+    ls -A $MODFILE_PATH/$VERSION.* 2> /dev/null
+
+# confirm before removing
+    echo
+    read -p "== Remove? [y/N]" yn
+
+    if [[ ! $yn =~ ^[Yy]$ ]]; then
+        echo "== No changes performed."
+        exit 0
+    fi
+
+    echo "== Removing..."
+
+# rm software
+    cd $SOFTWARE_PATH
+    echo "software files"
+    ls -A1 . | xargs rm -rf # takes care of any hidden files
+    recursive_rmdir
+
+# rm module file
+    cd $MODFILE_PATH
+    echo "module files"
+    if [ "$(ls -A $VERSION.* 2> /dev/null)" ]; then
+        rm $VERSION.*
+    fi
+    recursive_rmdir
+
+    echo "== Done."
+    echo
+done

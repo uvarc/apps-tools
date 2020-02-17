@@ -1,0 +1,154 @@
+#!/bin/bash
+#
+# Performs rsync from build to production
+# Ruoshi Sun
+# Last modified: 2020-01-17
+#
+
+if [[ $1 =~ ^[0-9]+ ]]; then
+	YYYYMM=$1
+	shift
+else
+	YYYYMM=201912
+fi
+BUILD_DIR="/sfs/applications/${YYYYMM}_build"
+echo "BUILD_DIR = $BUILD_DIR"
+
+if [[ $1 =~ ^[0-9]+ ]]; then
+	YYYYMM=$1
+	shift
+else
+	YYYYMM=201912
+fi
+PROD_DIR="/sfs/applications/${YYYYMM}"
+echo "PROD_DIR = $PROD_DIR"
+
+SOFTWARE="software"
+MODFILE="modulefiles"
+
+function print_usage {
+	echo "Usage: `basename $0` [YYYYMM (src)] [YYYYMM (dest)] CATEGORY [...] SOFTWARE/VERSION"
+	echo "       `basename $0` core       SOFTWARE/VERSION"
+	echo "       `basename $0` toolchains SOFTWARE/VERSION"
+	echo "       `basename $0` compiler   COMPILER_NAME/VERSION SOFTWARE/VERSION"
+	echo "       `basename $0` mpi        COMPILER_NAME/VERSION MPI_NAME/VERSION SOFTWARE/VERSION"
+	echo "       `basename $0` container  singularity/VERSION SOFTWARE/VERSION"
+	echo
+	echo "Example: `basename $0` core java/1.12.0"
+	echo "         `basename $0` compiler gcc/7.1.0 rust/1.38.0"
+	echo "         `basename $0` mpi gcc/7.1.0 openmpi/3.1.0 metis/5.1.0"
+}
+
+function print_error {
+	RED='\e[1;31m'
+	NC='\e[m'
+	echo -e "${RED}Error: $1${NC}"
+	echo
+	print_usage
+	exit 1
+}
+
+for i in $BUILD_DIR $PROD_DIR; do
+	if [ ! -e $i ]; then
+		print_error "$i not found. Please update $0."
+	fi
+done
+
+NARGS=$#
+if [ $NARGS -eq 0 ]; then
+	print_usage
+	exit 0
+fi
+
+case $1 in
+core|toolchains)
+	if [ $NARGS -ne 2 ]; then
+		print_error "missing arguments."
+	fi
+	PREFIX="standard/$1"
+	DIR=$2
+	;;
+compiler|container)
+	if [ $NARGS -ne 3 ]; then
+		print_error "missing arguments."
+	fi
+	PREFIX="standard/$1/$2"
+	if [ ! -e $BUILD_DIR/$SOFTWARE/standard/$1/$2 ]; then
+		print_error "$1 $2 not found."
+	fi
+	DIR=$3
+	;;
+mpi)
+	if [ $NARGS -ne 4 ]; then
+		print_error "missing arguments."
+	fi
+	PREFIX="standard/$1/$2/$3"
+	if [ ! -e $BUILD_DIR/$SOFTWARE/standard/$1/$2 ]; then
+		print_error "compiler $2 not found."
+	fi
+	if [ ! -e $BUILD_DIR/$SOFTWARE/standard/$1/$2/$3 ]; then
+		print_error "$1 $3 not found."
+	fi
+	DIR=$4
+	;;
+*)
+	print_error "invalid category $1."
+	;;
+esac
+
+SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
+# test for hidden module
+if grep -q "^hidden\s*=\s*True" $BUILD_DIR/$SOFTWARE/$PREFIX/$DIR/easybuild/*.eb; then
+	LUA="${DIR/\///.}.lua"
+else
+	LUA="$DIR.lua"
+fi
+MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
+
+echo "== Paths"
+echo "Software source and destination:"
+echo "$SOFTWARE_PATH"
+echo "$PROD_DIR/$SOFTWARE/$PREFIX/$DIR"
+echo 
+echo "Module file source and destination:"
+echo "$MODFILE_PATH"
+echo "$PROD_DIR/$MODFILE/$PREFIX/`dirname $DIR`"
+echo
+
+# check paths of software and module file
+for i in $SOFTWARE_PATH $MODFILE_PATH; do
+	if [ ! -e $i ]; then
+		print_error "$i not found."
+	fi
+done
+
+# dry rsync
+# note: rsync -R uses relative paths
+#read -p "== Press enter to perform rsync dry run: " dryrun
+#if [ ! -z $dryrun ]; then
+	#echo "Exiting..."
+	#exit 0
+#fi
+#
+#echo "== Performing rsync dry run..."
+#
+#cd $BUILD_DIR 
+#rsync -navR $SOFTWARE/$PREFIX/$DIR    $PROD_DIR && \
+#rsync -navR $MODFILE/$PREFIX/$LUA $PROD_DIR
+
+# real rsync
+echo
+read -p "== Perform rsync now? [y/N]" realrun
+
+if [[ ! $realrun =~ ^[Yy]$ ]]; then
+	echo "== No changes performed."
+	exit 0
+fi
+
+echo "== Performing rsync..."
+cd $BUILD_DIR 
+rsync -avR $SOFTWARE/$PREFIX/$DIR    $PROD_DIR && \
+rsync -avR $MODFILE/$PREFIX/$LUA $PROD_DIR
+
+echo
+echo "== Done."
