@@ -1,4 +1,4 @@
-# eb-tools
+# apps-tools
 Tools for apps stack
 
 An apps stack is defined as a directory of the form
