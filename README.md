@@ -1,5 +1,5 @@
 # eb-tools
-Tools for EasyBuild and apps stack
+Tools for apps stack
 
 An apps stack is defined as a directory of the form
 `/sfs/applications/YYYYMM[_build]`
