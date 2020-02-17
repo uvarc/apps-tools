@@ -6,5 +6,14 @@ An apps stack is defined as a directory of the form
 
 This repository contains the following Bash scripts:
 
-- `appsync` - Syncs an app between two apps stacks
-- `apprm` - Removes an app from an (or a list of) apps stack(s)
+EasyBuild:
+- `appsync` - Sync an app between two apps stacks
+- `apprm` - Remove an app from an (or a list of) apps stack(s)
+
+Vendor:
+- `vendorchown` - Change group ownership for vendor software
+
+Apps stack comparison:
+- `compare_stack` - Compare two apps stacks via `tree`
+- `tree2list` - Tidy up into a list
+- `list2md` - Combine 5 lists (core, compiler, mpi, toolchains, container) and convert into markdown
