@@ -1,5 +1,7 @@
 #!/bin/bash
 # compare two apps trees
+# print results as markdown
+#
 # Ruoshi Sun
 # 2020-02-18
 
@@ -8,7 +10,7 @@ ml gcc/7.1.0 tree
 
 STACK1=201912
 STACK2=202003
-DIR=~/tree
+DIR=~/tree/$STACK2
 
 function stack_diff {
     CATEGORY=$1
