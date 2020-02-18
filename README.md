@@ -11,6 +11,7 @@ This repository contains the following Bash scripts:
 ## EasyBuild
 - `appsync` - Sync an app between two apps stacks
 - `apprm` - Remove an app from an (or a list of) apps stack(s)
+- `find_incomplete_install` - Find potentially incomplete EasyBuild installations
 
 ## Vendor
 - `vendorchown` - Change group ownership for vendor software
