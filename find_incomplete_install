@@ -1,0 +1,40 @@
+#!/bin/bash
+# look for potentially incomplete installations in apps
+# criterion:
+# - missing *.eb file
+#
+# Ruoshi Sun
+# 2020-02-18
+
+APPDIR=/sfs/applications
+YYYYMM=202003_build
+
+function search_eb {
+    CATEGORY=$1
+
+    case $CATEGORY in
+    core|toolchains)
+        search="*/*"
+        ;;
+    compiler|container)
+        search="*/*/*/*"
+        ;;
+    mpi)
+        search="*/*/*/*/*/*"
+        ;;
+    esac
+
+    echo "Searching for missing *.eb"
+    for i in `echo "$search"`; do
+        if [ -d $i -a ! -e `echo "$serach"`/easybuild/*.eb ]; then
+            echo $i
+        fi
+    done
+}
+
+for c in core compiler mpi toolchains container; do
+    echo $c
+    cd $APPDIR/$YYYYMM/software/standard/$c
+    search_eb $c
+    echo
+done
