@@ -16,5 +16,5 @@ This repository contains the following Bash scripts:
 - `vendorchown` - Change group ownership for vendor software
 
 ## Apps stack management
-- `compare_stack` - Compare two apps stacks via `tree`
+- `stackdiff` - Compare two apps stacks via `tree`
 - `find_incomplete_install` - Find potentially incomplete EasyBuild installations
