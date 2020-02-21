@@ -16,33 +16,39 @@ fi
 YYYYMMs=$@
 
 function search_eb {
-    CATEGORY=$1
-
-    case $CATEGORY in
-    core|toolchains)
-        search="*/*"
-        ;;
-    compiler|container)
-        search="*/*/*/*"
-        ;;
-    mpi)
-        search="*/*/*/*/*/*"
-        ;;
-    esac
-
+    search=$1
+    incomplete=()
     for i in `echo "$search"`; do
         if [ -d $i -a ! -e $i/easybuild/*.eb ]; then
-            echo $i
+            incomplete+=( "$i" )
         fi
     done
 }
 
 for YYYYMM in $YYYYMMs; do
     echo "[$YYYYMM]"
-    for c in core compiler mpi toolchains container; do
-        echo $c
-        cd $APPDIR/$YYYYMM/software/standard/$c
-        search_eb $c
-        echo
+    for CATEGORY in core compiler mpi toolchains container; do
+        case $CATEGORY in
+        core|toolchains)
+            search="*/*"
+            ;;
+        compiler|container)
+            search="*/*/*/*"
+            ;;
+        mpi)
+            search="*/*/*/*/*/*"
+            ;;
+        esac
+
+        cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
+        search_eb "$search"
+        n=${#incomplete[@]}
+        N=`echo "$(echo $search)" | wc | awk '{print $2}'`
+
+        echo "$CATEGORY (${n}/${N})"
+        if [ $n -gt 0 ]; then
+            printf '    %s\n' "${incomplete[@]}"
+        fi
     done
+    echo
 done
