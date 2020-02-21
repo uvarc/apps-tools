@@ -1,7 +1,7 @@
 #!/bin/bash
 # look for potentially incomplete installations in apps
 # criterion:
-# - missing *.eb file
+# - missing *.eb file in easybuild/ or easybuild/reprod
 #
 # Ruoshi Sun
 # 2020-02-18
@@ -26,7 +26,7 @@ function search_eb {
     N=`wc -w <<< $APPS`
 
     for i in $APPS; do
-        if [ ! -e $i/easybuild/*.eb ]; then
+        if [ ! -e $i/easybuild/*.eb -o ! -e $i/easybuild/reprod/*.eb ]; then
             incomplete+=( "$i" )
         fi
     done
