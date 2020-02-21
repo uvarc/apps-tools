@@ -16,44 +16,38 @@ fi
 YYYYMMs=$@
 
 function search_eb {
-    search=$1
+    CATEGORY=$1
+    DEPTH=$2
     incomplete=()
-    for i in `echo "$search"`; do
-        if [ -d $i -a ! -e $i/easybuild/*.eb ]; then
+
+    cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
+    APPS=`find -maxdepth $DEPTH -mindepth $DEPTH -type d`
+# total number of apps in category
+    N=`wc <<< $APPS | awk '{print $2}'`
+
+    for i in $APPS; do
+        if [ ! -e $i/easybuild/*.eb ]; then
             incomplete+=( "$i" )
         fi
     done
+
+# number of incomplete installations
+    n=${#incomplete[@]}
+
+    echo "$CATEGORY (${n}/${N})"
+    if [ $n -gt 0 ]; then
+        printf '    %s\n' "${incomplete[@]}"
+    fi
 }
 
 for YYYYMM in $YYYYMMs; do
     echo "[$YYYYMM]"
-    for CATEGORY in core compiler mpi toolchains container; do
-        cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
 
-        case $CATEGORY in
-        core|toolchains)
-            search="*/*"
-            N=`find -maxdepth 2 -mindepth 2 -type d | wc -l`
-            ;;
-        compiler|container)
-            search="*/*/*/*"
-            N=`find -maxdepth 4 -mindepth 4 -type d | wc -l`
-            ;;
-        mpi)
-            search="*/*/*/*/*/*"
-            N=`find -maxdepth 6 -mindepth 6 -type d | wc -l`
-            ;;
-        esac
+    search_eb core       2
+    search_eb compiler   4
+    search_eb mpi        6
+    search_eb toolchains 2
+    search_eb container  4
 
-        search_eb "$search"
-        
-# number of incomplete installations
-        n=${#incomplete[@]}
-
-        echo "$CATEGORY (${n}/${N})"
-        if [ $n -gt 0 ]; then
-            printf '    %s\n' "${incomplete[@]}"
-        fi
-    done
     echo
 done
