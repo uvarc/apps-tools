@@ -113,12 +113,11 @@ for YYYYMM in $YYYYMMs; do
     MODFILE_PATH="$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$DIR"
     MODFILE_PATH="${MODFILE_PATH%/*}"
 
-# check paths of software and module file
-    for i in $SOFTWARE_PATH $MODFILE_PATH; do
-        if [ ! -e $i ]; then
-            print_error "$i not found."
-        fi
-    done
+# check if software path exists
+# do not check module path now, since it may not exist
+    if [ ! -e $SOFTWARE_PATH ]; then
+        print_error "$SOFTWARE_PATH not found."
+    fi
 
 # begin removal process
     echo "== To be removed"
@@ -148,12 +147,16 @@ for YYYYMM in $YYYYMMs; do
     recursive_rmdir
 
 # rm module file
-    cd $MODFILE_PATH
-    echo "module files"
-    if [ "$(ls -A $VERSION.* 2> /dev/null)" ]; then
-        rm $VERSION.*
+    if [ -e $MODFILE_PATH ]; then
+        cd $MODFILE_PATH
+        echo "module files"
+        if [ "$(ls -A $VERSION.* 2> /dev/null)" ]; then
+            rm $VERSION.*
+        fi
+        recursive_rmdir
+    else
+        echo "$MODFILE_PATH does not exist"
     fi
-    recursive_rmdir
 
     echo "== Done."
     echo
