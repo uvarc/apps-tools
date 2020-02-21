@@ -28,22 +28,27 @@ function search_eb {
 for YYYYMM in $YYYYMMs; do
     echo "[$YYYYMM]"
     for CATEGORY in core compiler mpi toolchains container; do
+        cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
+
         case $CATEGORY in
         core|toolchains)
             search="*/*"
+            N=`find -maxdepth 2 -mindepth 2 -type d | wc -l`
             ;;
         compiler|container)
             search="*/*/*/*"
+            N=`find -maxdepth 4 -mindepth 4 -type d | wc -l`
             ;;
         mpi)
             search="*/*/*/*/*/*"
+            N=`find -maxdepth 6 -mindepth 6 -type d | wc -l`
             ;;
         esac
 
-        cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
         search_eb "$search"
+        
+# number of incomplete installations
         n=${#incomplete[@]}
-        N=`echo "$(echo $search)" | wc | awk '{print $2}'`
 
         echo "$CATEGORY (${n}/${N})"
         if [ $n -gt 0 ]; then
