@@ -7,7 +7,13 @@
 # 2020-02-18
 
 APPDIR=/sfs/applications
-YYYYMM=202003_build
+
+if [ $# -eq 0 ]; then
+    echo "Usage: `basename $0` YYYYMM [...]"
+    exit 1
+fi
+
+YYYYMMs=$@
 
 function search_eb {
     CATEGORY=$1
@@ -24,17 +30,19 @@ function search_eb {
         ;;
     esac
 
-    echo "Searching for missing *.eb"
     for i in `echo "$search"`; do
-        if [ -d $i -a ! -e `echo "$serach"`/easybuild/*.eb ]; then
+        if [ -d $i -a ! -e $i/easybuild/*.eb ]; then
             echo $i
         fi
     done
 }
 
-for c in core compiler mpi toolchains container; do
-    echo $c
-    cd $APPDIR/$YYYYMM/software/standard/$c
-    search_eb $c
-    echo
+for YYYYMM in $YYYYMMs; do
+    echo "[$YYYYMM]"
+    for c in core compiler mpi toolchains container; do
+        echo $c
+        cd $APPDIR/$YYYYMM/software/standard/$c
+        search_eb $c
+        echo
+    done
 done
