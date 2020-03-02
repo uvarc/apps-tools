@@ -33,7 +33,8 @@ function stack_diff {
 
 function parse {
     FILE=$1
-    sed 's/[^0-9a-zA-Z_\-\.\/]*//g' $FILE
+# to treat "-" literally, need to put it as the first or last character
+    sed 's/[^-0-9a-zA-Z_\.\/]//g' $FILE
 }
 
 function tree2md {
@@ -59,8 +60,9 @@ function tree2md {
         -e 's/^</\- /' \
     > $TMP
 
-    grep "^+" $TMP >$DIR/$LIST
-    grep "^-" $TMP >>$DIR/$LIST
+    grep "^-" $TMP >$DIR/$LIST
+    echo
+    grep "^+" $TMP >>$DIR/$LIST
 
 # print markdown
     echo "#### $CATEGORY"

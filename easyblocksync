@@ -1,0 +1,20 @@
+#!/bin/bash
+# Ruoshi Sun
+# 2020-03-02
+
+if [ $# -ne 2 ]; then
+    echo "Usage: `basename $0` YYYYMM_src YYYYMM_dest"
+    exit 1
+fi
+
+DIR1="/sfs/applications/$1/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/"
+DIR2="/sfs/applications/$2/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/"
+
+for i in $DIR1 $DIR2; do
+    if [ ! -e $i ]; then
+        echo "Error: Directory $i not found"
+        exit 1
+    fi
+done
+
+rsync -av $DIR1 $DIR2
