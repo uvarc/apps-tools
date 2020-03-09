@@ -3,7 +3,6 @@
 # Performs rsync from build to production
 # Ruoshi Sun
 # Last modified: 2020-01-17
-#
 
 if [[ $1 =~ ^[0-9]+ ]]; then
 	YYYYMM=$1
@@ -33,6 +32,7 @@ function print_usage {
 	echo "       `basename $0` compiler   COMPILER_NAME/VERSION SOFTWARE/VERSION"
 	echo "       `basename $0` mpi        COMPILER_NAME/VERSION MPI_NAME/VERSION SOFTWARE/VERSION"
 	echo "       `basename $0` container  singularity/VERSION SOFTWARE/VERSION"
+	echo "       `basename $0` vendor     SOFTWARE/VERSION"
 	echo
 	echo "Example: `basename $0` core java/1.12.0"
 	echo "         `basename $0` compiler gcc/7.1.0 rust/1.38.0"
@@ -61,6 +61,13 @@ if [ $NARGS -eq 0 ]; then
 fi
 
 case $1 in
+vendor)
+	if [ $NARGS -ne 2 ]; then
+		print_error "missing arguments."
+	fi
+	PREFIX="$1"
+	DIR=$2
+	;;
 core|toolchains)
 	if [ $NARGS -ne 2 ]; then
 		print_error "missing arguments."
@@ -126,8 +133,8 @@ done
 # note: rsync -R uses relative paths
 #read -p "== Press enter to perform rsync dry run: " dryrun
 #if [ ! -z $dryrun ]; then
-	#echo "Exiting..."
-	#exit 0
+#	#echo "Exiting..."
+#	#exit 0
 #fi
 #
 #echo "== Performing rsync dry run..."
@@ -147,8 +154,8 @@ fi
 
 echo "== Performing rsync..."
 cd $BUILD_DIR 
-rsync -avR $SOFTWARE/$PREFIX/$DIR    $PROD_DIR && \
-rsync -avR $MODFILE/$PREFIX/$LUA $PROD_DIR
+rsync -avR $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
+rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR
 
 echo
 echo "== Done."

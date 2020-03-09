@@ -56,16 +56,16 @@ function tree2md {
         if (NF==n) print
     }' $DIR/$TREE12 | \
     sed -e '/^[^><]/d' \
-        -e 's/^>/\+ /' \
-        -e 's/^</\- /' \
+        -e 's/^> \.\//\+ /' \
+        -e 's/^< \.\//\- /' \
     > $TMP
 
     grep "^-" $TMP >$DIR/$LIST
-    echo
+    echo >>$DIR/$LIST
     grep "^+" $TMP >>$DIR/$LIST
 
 # print markdown
-    echo "#### $CATEGORY"
+    echo "**${CATEGORY}**"
     echo "\`\`\`bash"
     cat $DIR/$LIST
     echo "\`\`\`"
