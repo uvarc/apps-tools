@@ -2,13 +2,14 @@
 #
 # Performs rsync from build to production
 # Ruoshi Sun
-# Last modified: 2020-01-17
+
+YYYYMM_default=202003
 
 if [[ $1 =~ ^[0-9]+ ]]; then
 	YYYYMM=$1
 	shift
 else
-	YYYYMM=201912
+	YYYYMM=$YYYYMM_default
 fi
 BUILD_DIR="/sfs/applications/${YYYYMM}_build"
 echo "BUILD_DIR = $BUILD_DIR"
@@ -17,7 +18,7 @@ if [[ $1 =~ ^[0-9]+ ]]; then
 	YYYYMM=$1
 	shift
 else
-	YYYYMM=201912
+	YYYYMM=$YYYYMM_default
 fi
 PROD_DIR="/sfs/applications/${YYYYMM}"
 echo "PROD_DIR = $PROD_DIR"
