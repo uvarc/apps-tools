@@ -12,6 +12,7 @@ This repository contains the following Bash scripts:
 - `appsync` - Sync an app between two apps stacks
 - `apprm` - Remove an app from an (or a list of) apps stack(s)
 - `easyblocksync` - Sync easyblocks
+- `goolfc` - Automatic installation of entire goolfc toolchain
 
 ## Vendor
 - `vendorchown` - Change group ownership for vendor software

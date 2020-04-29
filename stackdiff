@@ -8,9 +8,16 @@
 module purge
 ml gcc/7.1.0 tree
 
-STACK1=201912
-STACK2=202003
+if [ $# -ne 2 ]; then
+    echo "Usage: `basename $0` stack1 stack2"
+    exit 1
+fi
+
+STACK1=$1
+STACK2=$2
+
 DIR=~/tree/$STACK2
+mkdir $DIR || true
 
 function stack_diff {
     CATEGORY=$1

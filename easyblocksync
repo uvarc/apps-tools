@@ -3,12 +3,16 @@
 # 2020-03-02
 
 if [ $# -ne 2 ]; then
-    echo "Usage: `basename $0` YYYYMM_src YYYYMM_dest"
+    echo "Usage: `basename $0` YYYYMM(src) YYYYMM(dest)"
     exit 1
 fi
 
-DIR1="/sfs/applications/$1/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/"
-DIR2="/sfs/applications/$2/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/"
+PREFIX=/sfs/applications
+SUFFIX=/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks
+
+# must be from build to build
+DIR1=$PREFIX/${1}_build/$SUFFIX
+DIR2=$PREFIX/${2}_build/$SUFFIX
 
 for i in $DIR1 $DIR2; do
     if [ ! -e $i ]; then
@@ -17,4 +21,4 @@ for i in $DIR1 $DIR2; do
     fi
 done
 
-rsync -av $DIR1 $DIR2
+rsync -nav $DIR1 $DIR2
