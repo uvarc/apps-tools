@@ -29,6 +29,7 @@ gaussian=911
 gaussian_students=29345
 gaussian_grads=29895
 gurobi=24717
+orca=31652
 users=100
 uvacse=409878
 vasp=30065
@@ -86,6 +87,9 @@ chown_dir $uvacse $gaussian_grads    gaussian/grads     1
 
 # gurobi
 chown_dir $uvacse $gurobi            gurobi             1
+
+# orca
+chown_dir $uvacse $orca              orca               1
 
 # vasp
 chown_dir $uvacse $users             vasp               0
