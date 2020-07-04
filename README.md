@@ -11,6 +11,7 @@ This repository contains the following Bash scripts:
 ## EasyBuild
 - `appsync` - Sync an app between two apps stacks
 - `apprm` - Remove an app from an (or a list of) apps stack(s)
+- `container2module` - Pull container and install as module
 - `easyblocksync` - Sync easyblocks
 - `goolfc` - Automatic installation of entire goolfc toolchain
 
