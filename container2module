@@ -170,4 +170,6 @@ echo
 echo -n "Done! "
 if command -v xxd &> /dev/null; then
     echo "0000000: f09f 8e89 0a" | xxd -r
+else
+    echo
 fi
