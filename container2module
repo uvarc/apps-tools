@@ -27,6 +27,8 @@ APP=$3
 TAG=$4
 [ $# -eq 4 ] && VERSION=$TAG || VERSION=$5
 
+module purge
+
 # constants
 SINGULARITY_VERSION=3.5.2
 SKOPEO_VERSION=1.1.0
@@ -158,8 +160,6 @@ echo
 
 # EasyBuild installation
 print_stage "EasyBuild"
-module purge
-module load easybuild
 if [ "$EB_FORCE" = true ]; then 
     exit_if_error "eb $EB -f" "EasyBuild installation failed"
 else 
@@ -167,4 +167,7 @@ else
 fi
 
 echo
-print_stage "Done!"
+echo -n "Done! "
+if command -v xxd &> /dev/null; then
+    echo "0000000: f09f 8e89 0a" | xxd -r
+fi
