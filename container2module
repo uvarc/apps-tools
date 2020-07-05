@@ -7,15 +7,15 @@
 # Ruoshi Sun
 # 2020-07-04
 
-if [[ $# -ne 5 ]]; then
-    echo "Usage: `basename $0` URI_prefix user app tag version"
-    echo "where URI_prefix = docker|library|shub|etc."
-    echo "      user       = username of repository (if empty, put \"\")"
-    echo "      app        = name of repository"
-    echo "      tag        = tag of repository"
-    echo "      version    = version to be used on Rivanna (may be different from tag)"
+if [[ $# -ne 4 && $# -ne 5 ]]; then
+    echo "Usage: `basename $0` URI_prefix user app tag [version]"
+    echo "    URI_prefix = docker|library|shub|etc."
+    echo "    user       = username of repository (if empty, put \"\")"
+    echo "    app        = name of repository"
+    echo "    tag        = tag of repository"
+    echo "    version    = Rivanna module version (default: tag)"
     echo
-    echo "The pull command is:"
+    echo "Pull command:"
     echo "singularity pull app-version.sif URI_prefix://[user/]app:tag"
     exit 1
 fi
@@ -25,7 +25,7 @@ URI_PREFIX=$1
 USER=$2
 APP=$3
 TAG=$4
-VERSION=$5
+[ $# -eq 4 ] && VERSION=$TAG || VERSION=$5
 
 # constants
 GPU=false
