@@ -29,13 +29,17 @@ function print_default {
     CAT=$1
     shift
     for APP in $@; do
-        MODFILE_PATH=$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$CAT/$APP
-        if [ ! -e $MODFILE_PATH/default ]; then
-            DEFAULT="undefined"
-        else
-            DEFAULT=`ls -l $MODFILE_PATH/default | awk '{sub(".lua", "", $NF); print $NF}'`
-        fi
-        printf "%-10s %s\n" $APP $DEFAULT
+        printf "%-10s" $APP
+        for YYYYMM in $YYYYMMs; do
+            MODFILE_PATH=$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$CAT/$APP
+            if [ ! -e $MODFILE_PATH/default ]; then
+                DEFAULT="undefined"
+            else
+                DEFAULT=`ls -l $MODFILE_PATH/default | awk '{sub(".lua", "", $NF); print $NF}'`
+            fi
+            printf " %-20s" $DEFAULT
+        done
+        echo
     done
 }
 
@@ -54,17 +58,18 @@ fi
 YYYYMMs=$1
 shift
 
-# loop over YYYYMM
-for i in $YYYYMMs; do
-    for YYYYMM in ${i}_build $i; do
-        echo "[$YYYYMM]"
-        echo "core:"
-        print_default core ${CORE[@]}
-        echo
-
-        echo "toolchains:"
-        TOOLCHAINS=(`ls $APPDIR/$YYYYMM/$MODFILE/$PREFIX/toolchains`)
-        print_default toolchains ${TOOLCHAINS[@]}
-        echo
-    done
+# print header
+printf "%10s" ""
+for i in "${YYYYMMs[@]}"; do
+    printf " %-20s" $i
 done
+echo
+
+echo "core:"
+print_default core ${CORE[@]}
+echo
+
+echo "toolchains:"
+TOOLCHAINS=(`ls $APPDIR/${YYYYMMs%% *}/$MODFILE/$PREFIX/toolchains`)
+print_default toolchains ${TOOLCHAINS[@]}
+echo
