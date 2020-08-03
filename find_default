@@ -1,0 +1,70 @@
+#!/bin/bash
+# Find default version of compilers and toolchains
+#
+# Ruoshi Sun
+# 2020-02-13
+
+APPDIR="/sfs/applications"
+SOFTWARE="software"
+MODFILE="modulefiles"
+PREFIX="standard"
+
+CATEGORY=("core" "toolchains")
+CORE=("gcc" "intel")
+
+function print_usage {
+	echo "Usage: `basename $0` \"YYYYMM_list\""
+}
+
+function print_error {
+	RED='\e[1;31m'
+	NC='\e[m'
+	echo -e "${RED}Error: $1${NC}"
+	echo
+	print_usage
+	exit 1
+}
+
+function print_default {
+    CAT=$1
+    shift
+    for APP in $@; do
+        MODFILE_PATH=$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$CAT/$APP
+        if [ ! -e $MODFILE_PATH/default ]; then
+            DEFAULT="undefined"
+        else
+            DEFAULT=`ls -l $MODFILE_PATH/default | awk '{sub(".lua", "", $NF); print $NF}'`
+        fi
+        printf "%-10s %s\n" $APP $DEFAULT
+    done
+}
+
+# must have at least 3 arguments
+NARGS=$#
+if [ $NARGS -ne 1 ]; then
+	print_usage
+	exit 1
+fi
+
+if [ ! -e $APPDIR ]; then
+    print_error "$APPDIR not found. Please update $0."
+fi
+
+# store list of YYYYMMs
+YYYYMMs=$1
+shift
+
+# loop over YYYYMM
+for i in $YYYYMMs; do
+    for YYYYMM in ${i}_build $i; do
+        echo "[$YYYYMM]"
+        echo "core:"
+        print_default core ${CORE[@]}
+        echo
+
+        echo "toolchains:"
+        TOOLCHAINS=(`ls $APPDIR/$YYYYMM/$MODFILE/$PREFIX/toolchains`)
+        print_default toolchains ${TOOLCHAINS[@]}
+        echo
+    done
+done

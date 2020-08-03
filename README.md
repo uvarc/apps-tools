@@ -21,6 +21,7 @@ This repository contains the following Bash scripts:
 ## Apps stack management
 - `stackdiff` - Compare two apps stacks via `tree`
 - `find_incomplete_install` - Find potentially incomplete EasyBuild installations
+- `find_default` - Find default version of compilers and toolchains
 
 ## Others
 - `jkrollout` - Install custom Jupyter kernel for a container
