@@ -69,7 +69,9 @@ SRCDIR=${APP::1}/${APP}
 cd $SRCDIR
 if [ -e $SIF ]; then
     read -p "$SIF already exists. Overwrite? [y/N]" yn
-    if [[ ! $yn =~ ^[Yy]$ ]]; then
+    if [[ $yn =~ ^[Yy]$ ]]; then
+        rm $SIF
+    else
         SKIP_PULL=true
     fi
     EB_FORCE=true # Module may already exist. Set "eb -f"
