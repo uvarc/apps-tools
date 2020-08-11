@@ -2,7 +2,7 @@
 # Find default version of compilers and toolchains
 #
 # Ruoshi Sun
-# 2020-02-13
+# 2020-08-03
 
 APPDIR="/sfs/applications"
 SOFTWARE="software"

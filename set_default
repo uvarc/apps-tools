@@ -1,0 +1,105 @@
+#!/bin/bash
+# Set default version of compilers and toolchains
+#
+# Ruoshi Sun
+# 2020-08-11
+
+APPDIR="/sfs/applications"
+SOFTWARE="software"
+MODFILE="modulefiles"
+PREFIX="standard"
+
+# define default versions
+GCC_VER=7.1.0
+GCCC_VER=6.5.0 # GCC for CUDA
+INTEL_VER=18.0
+OPENMPI_VER=3.1.4
+MVAPICH2_VER=2.3.1
+INTELMPI_VER=18.0
+CUDA_VER=10.1.168
+
+# compilers default (do not edit)
+COMPILERS=(gcc intel)
+COMPILERS_VER=($GCC_VER $INTEL_VER)
+
+# toolchain default (do not edit)
+TOOLCHAINS=(gcccuda gmvapich2 gmvolf gompi gompic goolf goolfc iintelmpi imvapich2)
+TOOLCHAINS_VER=( \
+    ${GCCC_VER}_${CUDA_VER} \
+    ${GCC_VER}_${MVAPICH2_VER} \
+    ${GCC_VER}_${MVAPICH2_VER} \
+    ${GCC_VER}_${OPENMPI_VER} \
+    ${GCCC_VER}_${OPENMPI_VER} \
+    ${GCC_VER}_${OPENMPI_VER} \
+    ${GCCC_VER}_${OPENMPI_VER}_${CUDA_VER} \
+    ${INTEL_VER}_${INTELMPI_VER} \
+    ${INTEL_VER}_${MVAPICH2_VER} \
+)
+
+CATEGORY=("core" "toolchains")
+CORE=("gcc" "intel")
+
+function print_usage {
+	echo "Usage: `basename $0` \"YYYYMM_list\""
+}
+
+function print_error {
+	RED='\e[1;31m'
+	NC='\e[m'
+	echo -e "${RED}Error: $1${NC}"
+	echo
+	print_usage
+	exit 1
+}
+
+function print_default {
+    CAT=$1
+    shift
+    if [ "$CAT" = "core" ]; then
+        APP=("${COMPILERS[@]}")
+        APP_VER=("${COMPILERS_VER[@]}")
+    elif [ "$CAT" = "toolchains" ]; then
+        APP=("${TOOLCHAINS[@]}")
+        APP_VER=("${TOOLCHAINS_VER[@]}")
+    else
+        print_error "Category $CAT not found."
+    fi
+
+    for i in "${!APP[@]}"; do
+        printf "%-10s" ${APP[$i]}
+        MODFILE_PATH=$APPDIR/$YYYYMM/$MODFILE/$PREFIX/$CAT/${APP[$i]}
+        cd $MODFILE_PATH
+        if [ -e default ]; then
+            rm default 
+        fi
+
+        LUA="${APP_VER[$i]}.lua"
+        if [ ! -e $LUA ]; then
+            print_error "Module file $LUA not found."
+        fi
+        ln -s $LUA default
+
+        basename `readlink -f default`
+        cd ..
+    done
+}
+
+if [ $# -ne 1 ]; then
+	print_usage
+	exit 1
+fi
+
+if [ ! -e $APPDIR ]; then
+    print_error "$APPDIR not found. Please update $0."
+fi
+
+# store list of YYYYMMs
+YYYYMMs=$1
+shift
+
+for YYYYMM in $YYYYMMs; do
+    echo $YYYYMM
+    print_default core
+    print_default toolchains
+    echo
+done
