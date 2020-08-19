@@ -158,5 +158,11 @@ cd $BUILD_DIR
 rsync -avR $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
 rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR
 
+# check default symlink
+APP=${DIR%/*}
+if [ -e $MODFILE/$PREFIX/$APP/default ]; then
+    rsync -avR $MODFILE/$PREFIX/$APP/default $PROD_DIR
+fi
+
 echo
 echo "== Done."
