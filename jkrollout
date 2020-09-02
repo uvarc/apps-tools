@@ -43,7 +43,7 @@ fi
 
 # check if $SIF contains /bin/sh
 print_stage "Inspecting $SIF"
-singularity inspect $SIFPATH
+singularity inspect $SIFPATH 2>/dev/null
 if [ $? -eq 255 ]; then
     echo "Container may not have /bin/sh. Use singularity 3.6+."
     SINGULARITY_VERSION=3.6.1
