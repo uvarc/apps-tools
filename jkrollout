@@ -41,6 +41,14 @@ if [ -z "$DISPLAYNAME" ]; then
     exit 1
 fi
 
+# check if $SIF contains /bin/sh
+print_stage "Inspecting $SIF"
+singularity inspect $SIFPATH
+if [ $? -eq 255 ]; then
+    echo "Container may not have /bin/sh. Use singularity 3.6+."
+    SINGULARITY_VERSION=3.6.1
+fi
+
 # check if $SIF contains kernel package
 print_stage "Checking $SIF for ipykernel"
 singularity exec $SIFPATH python -c "import ipykernel" &> /dev/null

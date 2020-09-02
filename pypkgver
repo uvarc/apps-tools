@@ -50,21 +50,29 @@ function search_conda {
 }
 
 function search_pip {
+    TMP=$(mktemp)
     for i in $PACKAGES_SORTED; do
         if [ "$EB" = "true" ]; then
-            pip search $i | awk '{
+            pip search $i | tail -n +1 | awk '{
                 if(NR==1) {
                     gsub(/[()]/,"")
                     printf "requirements += \"%s==%s \"\n", $1, $2
                 }
             }'
         else
-            pip search $i | head -1
+            pip search $i >$TMP
+            awk -v i=$i '{
+                if ($1==i) {
+                    gsub(/[()]/,"")
+                    printf "%s==%s\n", $1, $2
+                    exit
+                }
+            }' $TMP
         fi
     done
 }
 
-module load anaconda
+module load anaconda/2019.10-py3.7
 
 if [[ $MANAGER =~ ^c ]]; then
     search_conda $PACKAGES_SORTED

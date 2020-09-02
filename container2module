@@ -7,13 +7,14 @@
 # Ruoshi Sun
 # 2020-07-04
 
-if [[ $# -ne 4 && $# -ne 5 ]]; then
-    echo "Usage: `basename $0` URI_prefix user app tag [version]"
-    echo "    URI_prefix = docker|library|shub|etc."
-    echo "    user       = username of repository (if empty, put \"\")"
-    echo "    app        = name of repository"
-    echo "    tag        = tag of repository"
-    echo "    version    = Rivanna module version (default: tag)"
+if [[ $# -lt 4 || $# -gt 6 ]]; then
+    echo "Usage: `basename $0` URI_prefix user app tag [version] [singularity_version]"
+    echo "             URI_prefix = docker|library|shub|etc."
+    echo "                   user = username of repository (if empty, put \"\")"
+    echo "                    app = name of repository"
+    echo "                    tag = tag of repository"
+    echo "                version = Rivanna module version (default: tag)"
+    echo "    singularity_version = Singularity version (default: 3.5.2)"
     echo
     echo "Pull command:"
     echo "singularity pull app-version.sif URI_prefix://[user/]app:tag"
@@ -26,13 +27,16 @@ USER=$2
 APP=$3
 TAG=$4
 [ $# -eq 4 ] && VERSION=$TAG || VERSION=$5
-
+if [ $# -eq 6 ]; then
+    SINGULARITY_VERSION=$6
+    SKOPEO_VERSION=1.1.1
+else
+    SINGULARITY_VERSION=3.5.2
+    SKOPEO_VERSION=1.1.0
+fi
 module purge
 
 # constants
-SINGULARITY_VERSION=3.5.2
-SKOPEO_VERSION=1.1.0
-
 HERE=`pwd`
 
 # functions

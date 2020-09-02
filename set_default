@@ -10,13 +10,13 @@ MODFILE="modulefiles"
 PREFIX="standard"
 
 # define default versions
-GCC_VER=7.1.0
-GCCC_VER=6.5.0 # GCC for CUDA
-INTEL_VER=18.0
-OPENMPI_VER=3.1.4
-MVAPICH2_VER=2.3.1
-INTELMPI_VER=18.0
-CUDA_VER=10.1.168
+GCC_VER=9.2.0
+GCCC_VER=9.2.0 # GCC for CUDA
+INTEL_VER=20.0
+OPENMPI_VER=3.1.6
+MVAPICH2_VER=2.3.3
+INTELMPI_VER=20.0
+CUDA_VER=11.0.228
 
 # compilers default (do not edit)
 COMPILERS=(gcc intel)
