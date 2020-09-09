@@ -26,4 +26,5 @@ This repository contains the following Bash scripts:
 
 ## Others
 - `jkrollout` - Install custom Jupyter kernel for a container
+- `getpylib` - Find library dependencies of Python packages
 - `pypkgver` - Find latest version of Python packages via conda or pip
