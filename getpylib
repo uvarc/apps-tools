@@ -4,17 +4,16 @@
 # Ruoshi Sun
 # 2020-09-09
 
-if [ $# -lt 3 ]; then
-    echo "Usage: `basename $0` image python_version site|dist [python_cmd]"
+if [ $# -lt 2 ]; then
+    echo "Usage: `basename $0` image /path/to/site-packages [python_cmd]"
     exit 1
 fi
 IMG=$1
-PYTHON_VERSION=$2
-DIR="/usr/local/lib/python${PYTHON_VERSION}/$3-packages"
+DIR=$2
 PYTHON="python"
 
-if [ $# -eq 4 ]; then
-    PYTHON=$4
+if [ $# -eq 3 ]; then
+    PYTHON=$3
 fi
 
 # python module list
