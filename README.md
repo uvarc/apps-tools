@@ -23,9 +23,3 @@ This repository contains the following Bash scripts:
 - `find_incomplete_install` - Find potentially incomplete EasyBuild installations
 - `set_default` - Set default version of compilers and toolchains
 - `stackdiff` - Compare two apps stacks via `tree`
-
-## Others
-- `getlib` - Find library dependencies of binaries
-- `getpylib` - Find library dependencies of Python packages
-- `jkrollout` - Install custom Jupyter kernel for a container
-- `pypkgver` - Find latest version of Python packages via conda or pip
