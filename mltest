@@ -1,0 +1,59 @@
+#!/bin/bash
+# test module load for the entire apps stack
+# Ruoshi Sun
+# 2020-11-17
+
+PREFIX=/apps/modulefiles/standard/core
+
+function ml {
+    module purge
+    module load $1/$2
+}
+
+function print_result {
+    CATEGORY=$1
+    shift
+    LIST=("$@")
+    N=${#LIST[@]} 
+    if [ $N -gt 0 ]; then
+        echo "$CATEGORY ($N):"
+        for i in "${LIST[@]}"; do
+            echo $i
+        done
+    fi
+}
+
+# list of modules that failed to load
+FAIL=()
+# list of modules that do not have a modulefile
+EMPTY=()
+
+echo "[$PREFIX]"
+for APP in `ls $PREFIX`; do
+    LUA=($(find $PREFIX/$APP -name '*.lua' -exec basename {} \;))
+
+    if [ ${#LUA[@]} -eq 0 ]; then
+        echo "$APP ... EMPTY"
+        EMPTY+=("$APP")
+        continue
+    fi
+
+    for VERSION in ${LUA[@]/.lua/}; do
+        echo -n "$APP/$VERSION "
+        if [ ${VERSION:0:1} = "." ]; then 
+            echo -n "(H) "
+        fi
+        echo -n "... "
+
+        ml $APP $VERSION
+        if [ $? -eq 0 ]; then
+            echo "PASS"
+        else 
+            echo "FAIL"
+            FAIL+=("$APP/$VERSION")
+        fi
+    done
+done
+
+print_result Empty "${EMPTY[@]}"
+print_result Fail "${FAIL[@]}"
