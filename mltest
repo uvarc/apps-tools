@@ -3,76 +3,125 @@
 # Ruoshi Sun
 # 2020-11-17
 
-PREFIX=/apps/modulefiles/standard/core
+if [ $# -ne 1 ]; then
+    echo "Usage: `basename $0` CATEGORY"
+    echo "    CATEGORY = core|toolchains|compiler|mpi|container|vendor|all"
+    echo "Since the modules need to be loaded, you cannot run this script for other YYYYMMs."
+    exit 1
+fi
+
+if [ "$1" = "all" ]; then
+    CATEGORY=(core toolchains compiler mpi container vendor)
+else
+    CATEGORY=$1
+fi
+
+MODULEPATH_DEFAULT=/apps/modulefiles/standard/core:/apps/modulefiles/standard/toolchains:/apps/modulefiles/vendor
+
+# stdout/stderr from module load
 TMP=$(mktemp)
+
 
 function ml {
     module purge
-    module load $1/$2 &>$TMP
+    module load "$@" &>$TMP
 }
 
 function print_result {
-    STATUS=$1
-    shift
+    N=$1
+    Npass=$2
+    shift 2
+    FAIL=("$@")
+    Nfail=${#FAIL[@]} 
 
-    if [ "$STATUS" = "Pass" ]; then
-        Npass=$1
-        echo "$STATUS ($Npass)"
-    else
-        LIST=("$@")
-        Nlist=${#LIST[@]} 
-        echo "$STATUS ($Nlist)"
-        if [ $Nlist -gt 0 ]; then
-            for i in "${LIST[@]}"; do
-                echo "  $i"
-            done
-        fi
+    echo "--------"
+    echo "PASS: $Npass/$N"
+    echo "FAIL: $Nfail/$N"
+    if [ $Nfail -gt 0 ]; then
+        for i in "${FAIL[@]}"; do
+            echo "  $i"
+        done
     fi
 }
 
+for i in ${CATEGORY[@]}; do
+    PREFIX=/apps/modulefiles/standard/$i
+
 # list of modules that failed to load
-FAIL=()
-# list of modules that do not have a modulefile
-EMPTY=()
-# number of modules
-N=0
-Npass=0
+    FAIL=()
 
-echo "[$PREFIX]"
-for APP in `ls $PREFIX`; do
-    N=$((N+1))
-    LUA=($(find $PREFIX/$APP -name '*.lua' -exec basename {} \;))
+    echo "[$PREFIX]"
+    LUAS=($(find $PREFIX -name '*.lua'))
+    N=${#LUAS[@]}
+    for j in ${LUAS[@]}; do
+        unset MODULEPATH
+        ML=()
+        LUA=$(basename $j)
+        APP=$(echo $j|awk -F'/' '{print $(NF-1)}')
+        VERSION=${LUA/.lua/}
 
-    if [ ${#LUA[@]} -eq 0 ]; then
-        echo "$APP ... EMPTY"
-        EMPTY+=("$APP")
-        continue
-    fi
+        case "$i" in 
+        "core")
+            export MODULEPATH=$MODULEPATH_DEFAULT
+            ;;
+        "compiler"|"container"|"mpi")
+            n=$((${#PREFIX}+1))
+            PARENT=$(dirname $j)
+            PARENT=${PARENT:$n}
+            PARENT=${PARENT%/*}
+            COMPILER=${PARENT%%/*}
 
-    for VERSION in ${LUA[@]/.lua/}; do
+            if [ "$COMPILER" = "gcc-cuda" ]; then
+                export MODULEPATH=/apps/modulefiles/standard/compiler:/apps/modulefiles/standard/mpi:$MODULEPATH
+            else
+                export MODULEPATH=$MODULEPATH_DEFAULT
+                if [ "$i" = "mpi" ]; then
+                    ML+=($(echo $PARENT|awk -F'/' '{printf "%s/%s %s/%s",$1,$2,$3,$4}'))
+                else
+                    ML+=($PARENT)
+                fi
+            fi
+            echo -n "$PARENT/"
+            ;;
+        *)
+            echo "Unknown category"
+            exit 1
+            ;;
+        esac
+
         echo -n "$APP/$VERSION "
         if [ ${VERSION:0:1} = "." ]; then 
             echo -n "(H) "
         fi
         echo -n "... "
 
-        ml $APP $VERSION
+        if [ "$COMPILER" = "gcc-cuda" ]; then
+            ML+=("$PARENT/$APP/$VERSION")
+        else
+            ML+=("$APP/$VERSION")
+        fi
+        ml "${ML[@]}"
+
         if [ $? -eq 0 ]; then
             echo "PASS"
-            Npass=$((Npass+1))
         else 
             echo "FAIL"
-            FAIL+=("$APP/$VERSION")
             cat $TMP
+
+            case "$i" in
+            "core"|"toolchain")
+                FAIL+=("$APP/$VERSION")
+                ;;
+            *)
+                FAIL+=("$PARENT/$APP/$VERSION")
+                ;;
+            esac
         fi
     done
+
+    Npass=$(($N-${#FAIL[@]}))
+    print_result $N $Npass "${FAIL[@]}"
+    echo
 done
 
-echo "########"
-echo "Results"
-echo "--------"
-echo "Total: $N"
-print_result Pass  $Npass
-print_result Empty "${EMPTY[@]}"
-print_result Fail  "${FAIL[@]}"
 rm $TMP
