@@ -45,7 +45,11 @@ function print_result {
 }
 
 for i in ${CATEGORY[@]}; do
-    PREFIX=/apps/modulefiles/standard/$i
+    if [ "$i" = "vendor" ]; then
+        PREFIX=/apps/modulefiles/$i
+    else
+        PREFIX=/apps/modulefiles/standard/$i
+    fi
 
 # list of modules that failed to load
     FAIL=()
@@ -61,7 +65,7 @@ for i in ${CATEGORY[@]}; do
         VERSION=${LUA/.lua/}
 
         case "$i" in 
-        "core")
+        "core"|"toolchains"|"vendor")
             export MODULEPATH=$MODULEPATH_DEFAULT
             ;;
         "compiler"|"container"|"mpi")
@@ -72,7 +76,7 @@ for i in ${CATEGORY[@]}; do
             COMPILER=${PARENT%%/*}
 
             if [ "$COMPILER" = "gcc-cuda" ]; then
-                export MODULEPATH=/apps/modulefiles/standard/compiler:/apps/modulefiles/standard/mpi:$MODULEPATH
+                export MODULEPATH=/apps/modulefiles/standard/compiler:/apps/modulefiles/standard/mpi:$MODULEPATH_DEFAULT
             else
                 export MODULEPATH=$MODULEPATH_DEFAULT
                 if [ "$i" = "mpi" ]; then
@@ -96,7 +100,12 @@ for i in ${CATEGORY[@]}; do
         echo -n "... "
 
         if [ "$COMPILER" = "gcc-cuda" ]; then
-            ML+=("$PARENT/$APP/$VERSION")
+            if [ "$APP" = "scalapack" ]; then
+                GCCVERSION=$(echo $PARENT|awk -F'/' '{sub(/-.*/,"",$2); print $2}')
+                ML+=("gcc/$GCCVERSION" "openblas" "$PARENT/$APP/$VERSION")
+            else
+                ML+=("$PARENT/$APP/$VERSION")
+            fi
         else
             ML+=("$APP/$VERSION")
         fi
