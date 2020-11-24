@@ -1,0 +1,22 @@
+#!/bin/bash
+# find reverse dependency of module
+# Ruoshi Sun
+# 2020-11-24
+
+if [[ $# -eq 0 || $# -gt 2 ]]; then
+    echo "Usage: `basename $0` APP [VERSION]"
+    exit 1
+fi
+
+APP=$1
+if [ $# -eq 2 ]; then
+    VERSION=$2
+    SEARCH="$APP/$VERSION"
+else
+    SEARCH="$APP/.*"
+fi
+
+DIR=/apps/modulefiles/standard
+N=$((${#DIR}+2))
+
+find $DIR -name '*.lua' -exec grep -l "load(\"$SEARCH\")" {} \; | cut -c ${N}- | sed 's/.lua$//'

@@ -22,5 +22,6 @@ This repository contains the following Bash scripts:
 - `find_default` - Find default version of compilers and toolchains
 - `find_incomplete_install` - Find potentially incomplete EasyBuild installations
 - `mltest` - Test module load for the entire apps stack
+- `revdep` - Find reverse dependency
 - `set_default` - Set default version of compilers and toolchains
 - `stackdiff` - Compare two apps stacks via `tree`
