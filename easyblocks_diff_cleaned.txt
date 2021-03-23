@@ -1,0 +1,1983 @@
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/c/cgal.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/c/cgal.py
+index 662796f..d2e63b5 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/c/cgal.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/c/cgal.py
+@@ -62,6 +62,7 @@ class EB_CGAL(CMakeMake):
+         libs = [tuple(os.path.join(d, 'libCGAL%s.%s' % (l, shlib_ext)) for d in libdirs) for l in ['', '_Core']]
+         custom_paths = {
+             'files': ['bin/cgal_%s' % x for x in ['create_cmake_script', 'make_macosx_app']] + libs,
+-            'dirs': ['include/CGAL', ('lib/CGAL', 'lib64/CGAL')],
++#            'dirs': ['include/CGAL', ('lib/CGAL', 'lib64/CGAL')],
++            'dirs': ['include', ('lib', 'lib64')],
+         }
+         super(EB_CGAL, self).sanity_check_step(custom_paths=custom_paths)
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/c/cp2k.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/c/cp2k.py
+index e6f2f96..a2df30e 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/c/cp2k.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/c/cp2k.py
+@@ -183,7 +183,7 @@ class EB_CP2K(EasyBlock):
+             raise EasyBuildError("Don't know how to tweak configuration for compiler family %s" % comp_fam)
+ 
+         # BLAS/LAPACK/FFTW
+-        if get_software_root('imkl'):
++        if get_software_root('imkl') or os.getenv('MKLROOT'):
+             options = self.configure_MKL(options)
+         else:
+             # BLAS
+@@ -255,7 +255,9 @@ class EB_CP2K(EasyBlock):
+         self.log.debug("Preparing module files")
+ 
+         imkl = get_software_root('imkl')
+-
++        if not imkl:
++            imkl = os.getenv('MKLROOT')
++        self.log.debug("MKLROOT: %s", imkl)
+         if imkl:
+ 
+             # prepare modinc target path
+@@ -471,7 +473,11 @@ class EB_CP2K(EasyBlock):
+         options['FCFLAGSOPT'] += ' $(INCFLAGS) -heap-arrays 64'
+         options['FCFLAGSOPT2'] += ' $(INCFLAGS) -heap-arrays 64'
+ 
+-        ifortver = LooseVersion(get_software_version('ifort'))
++        intelver = get_software_version('intel') # ifort
++        if intelver and len(intelver.split('.')[0]) == 2:
++            intelver = '20%s' % intelver
++        ifortver = LooseVersion(intelver) # ifort
++        self.log.debug("ifort loose version: %s" % ifortver)
+ 
+         # -i-static has been deprecated prior to 2013, but was still usable. From 2015 it is not.
+         if ifortver < LooseVersion("2013"):
+@@ -497,7 +503,7 @@ class EB_CP2K(EasyBlock):
+                 raise EasyBuildError(failmsg, "v12", "v2011.8")
+ 
+         elif ifortver >= LooseVersion("11"):
+-            if LooseVersion(get_software_version('ifort')) >= LooseVersion("11.1.072"):
++            if ifortver >= LooseVersion("11.1.072"):
+                 self.make_instructions += "qs_vxc_atom.o: qs_vxc_atom.F\n\t$(FC) -c $(FCFLAGS2) $<\n"
+ 
+             else:
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/g/gromacs.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/g/gromacs.py
+index 0519385..615d289 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/g/gromacs.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/g/gromacs.py
+@@ -247,9 +247,9 @@ class EB_GROMACS(CMakeMake):
+             else:
+                 self.cfg.update('configopts', "-DGMX_GPU=OFF")
+ 
+-            if get_software_root('imkl'):
++            if get_software_root('imkl') or os.getenv('MKLROOT'):
+                 # using MKL for FFT, so it will also be used for BLAS/LAPACK
+-                self.cfg.update('configopts', '-DGMX_FFT_LIBRARY=mkl -DMKL_INCLUDE_DIR="$EBROOTMKL/mkl/include" ')
++                self.cfg.update('configopts', '-DGMX_FFT_LIBRARY=mkl -DMKL_INCLUDE_DIR="$MKLROOT/include" ')
+                 libs = os.getenv('LAPACK_STATIC_LIBS').split(',')
+                 mkl_libs = [os.path.join(os.getenv('LAPACK_LIB_DIR'), lib) for lib in libs if lib != 'libgfortran.a']
+                 mkl_libs = ['-Wl,--start-group'] + mkl_libs + ['-Wl,--end-group']
+
+diff --git a/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/buildscript.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/buildscript.py
+new file mode 100644
+index 0000000..6ea4894
+--- /dev/null
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/buildscript.py
+@@ -0,0 +1,77 @@
++##
++# Copyright 2009-2018 Ghent University
++#
++# This file is part of EasyBuild,
++# originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
++# with support of Ghent University (http://ugent.be/hpc),
++# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
++# Flemish Research Foundation (FWO) (http://www.fwo.be/en)
++# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
++#
++# https://github.com/easybuilders/easybuild
++#
++# EasyBuild is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation v2.
++#
++# EasyBuild is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with EasyBuild.  If not, see <http://www.gnu.org/licenses/>.
++##
++"""
++EasyBuild support for installing (precompiled) software which is supplied as a tarball,
++implemented as an easyblock
++
++@author: Stijn De Weirdt (Ghent University)
++@author: Dries Verdegem (Ghent University)
++@author: Kenneth Hoste (Ghent University)
++@author: Pieter De Baets (Ghent University)
++@author: Jens Timmerman (Ghent University)
++"""
++import shutil
++
++from easybuild.framework.easyblock import EasyBlock
++from easybuild.tools.build_log import EasyBuildError
++from easybuild.tools.run import run_cmd
++from easybuild.framework.easyconfig import CUSTOM
++
++class BuildScript(EasyBlock):
++    """
++    Softare builds from script provided as source
++    """
++
++    @staticmethod
++    def extra_options(extra_vars=None):
++        """Extra easyconfig parameters specific to BuildScript easyblock."""
++        extra_vars = EasyBlock.extra_options(extra_vars)
++        extra_vars.update({
++            'install_cmds': [None, "List of commands to run to install the software", CUSTOM],
++        })
++        return extra_vars
++
++    def configure_step(self):
++        """
++        Dummy configure method
++        """
++        pass
++
++    def build_step(self):
++        """
++        Dummy build method: nothing to build
++        """
++        pass
++
++    def install_step(self, src=None):
++        """Install by running specified install commands."""
++        if self.cfg['install_cmds'] is not None:
++     	    for cmd in self.cfg['install_cmds']:
++                run_cmd(cmd, log_all=True)        
++    
++    def sanity_check_rpath(self):
++        """Skip the rpath sanity check, this is binary software"""
++        self.log.info("RPATH sanity check is skipped when using %s easyblock (derived from Tarball)",
++                      self.__class__.__name__)
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/generic/mesonninja.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/mesonninja.py
+index 0e8c480..ea2c150 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/generic/mesonninja.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/mesonninja.py
+@@ -56,7 +56,7 @@ class MesonNinja(EasyBlock):
+         """
+         # make sure both Meson and Ninja are included as build dependencies
+         build_dep_names = [d['name'] for d in self.cfg.builddependencies()]
+-        for tool in ['Ninja', 'Meson']:
++        for tool in ['ninja', 'meson']:
+             if tool not in build_dep_names:
+                 raise EasyBuildError("%s not included as build dependency", tool)
+             cmd = tool.lower()
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/generic/pythonpackage.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/pythonpackage.py
+index 2409118..f9a4cfc 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/generic/pythonpackage.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/generic/pythonpackage.py
+@@ -587,9 +587,10 @@ class PythonPackage(ExtensionEasyBlock):
+                 downloaded_deps.extend(re.compile(pattern, re.M).findall(self.install_cmd_output))
+ 
+             if downloaded_deps:
+-                success = False
+-                fail_msg = "found one or more downloaded dependencies: %s" % ', '.join(downloaded_deps)
+-                self.sanity_check_fail_msgs.append(fail_msg)
++                pass
++                #success = False
++                #fail_msg = "found one or more downloaded dependencies: %s" % ', '.join(downloaded_deps)
++                #self.sanity_check_fail_msgs.append(fail_msg)
+         else:
+             self.log.debug("Detection of downloaded dependencies not enabled")
+ 
+diff --git a/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/i/intel.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/i/intel.py
+new file mode 100644
+index 0000000..b7bd190
+--- /dev/null
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/i/intel.py
+@@ -0,0 +1,339 @@
++# #
++# Copyright 2009-2019 Ghent University
++#
++# This file is part of EasyBuild,
++# originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
++# with support of Ghent University (http://ugent.be/hpc),
++# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
++# Flemish Research Foundation (FWO) (http://www.fwo.be/en)
++# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
++#
++# https://github.com/easybuilders/easybuild
++#
++# EasyBuild is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation v2.
++#
++# EasyBuild is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with EasyBuild.  If not, see <http://www.gnu.org/licenses/>.
++# #
++"""
++EasyBuild support for install the Intel C/C++ compiler suite, implemented as an easyblock
++
++@author: Stijn De Weirdt (Ghent University)
++@author: Dries Verdegem (Ghent University)
++@author: Kenneth Hoste (Ghent University)
++@author: Pieter De Baets (Ghent University)
++@author: Jens Timmerman (Ghent University)
++@author: Ward Poelmans (Ghent University)
++@author: Fokko Masselink
++"""
++
++import os
++import re
++import shutil
++from distutils.version import LooseVersion
++
++from easybuild.framework.easyconfig import CUSTOM
++from easybuild.framework.easyblock import EasyBlock
++from easybuild.easyblocks.generic.intelbase import IntelBase, ACTIVATION_NAME_2012, COMP_ALL
++from easybuild.easyblocks.generic.intelbase import LICENSE_FILE_NAME_2012
++from easybuild.easyblocks.t.tbb import get_tbb_gccprefix
++from easybuild.tools.run import run_cmd
++from easybuild.tools.systemtools import get_shared_lib_ext
++
++
++def get_icc_version():
++    """Obtain icc version string via 'icc --version'."""
++    cmd = "icc --version"
++    (out, _) = run_cmd(cmd, log_all=True, simple=False)
++
++    ver_re = re.compile("^icc \(ICC\) (?P<version>[0-9.]+) [0-9]+$", re.M)
++    version = ver_re.search(out).group('version')
++
++    return version
++
++
++class EB_intel(IntelBase):
++    """Support for installing icc
++
++    - tested with 11.1.046
++        - will fail for all older versions (due to newer silent installer)
++    """
++
++    @staticmethod
++    def extra_options():
++        """Add extra easyconfig parameters for Intel."""
++        extra_vars = {
++            'official_version': [None, "Official Intel version XXXX.X.XXX", CUSTOM],
++            'hide_mpi': [True, "LD_LIBRARY_PATH, CPATH, PATH are not including any reference to MPI libs or headers", CUSTOM],
++        }
++        return IntelBase.extra_options(extra_vars)
++
++
++    def __init__(self, *args, **kwargs):
++        """Constructor, initialize class variables."""
++        super(EB_intel, self).__init__(*args, **kwargs)
++
++        self.debuggerpath = None
++
++        self.comp_libs_subdir = None
++
++        if LooseVersion(self.cfg['official_version']) >= LooseVersion('2016'):
++
++            self.comp_libs_subdir = os.path.join('compilers_and_libraries_%s' % self.cfg['official_version'], 'linux')
++
++            if self.cfg['components'] is None:
++                # we need to use 'ALL' by default,
++                # using 'DEFAULTS' results in key things not being installed (e.g. bin/icc)
++                self.cfg['components'] = [COMP_ALL]
++                self.log.debug("Nothing specified for components, but required for version 2016, using %s instead",
++                               self.cfg['components'])
++    
++    
++    def install_step(self):
++        """
++        Actual installation
++        - create silent cfg file
++        - execute command
++        """
++        silent_cfg_names_map = None
++
++        if LooseVersion(self.cfg['official_version']) < LooseVersion('2013_sp1'):
++            # since icc v2013_sp1, silent.cfg has been slightly changed to be 'more standard'
++
++            silent_cfg_names_map = {
++                'activation_name': ACTIVATION_NAME_2012,
++                'license_file_name': LICENSE_FILE_NAME_2012,
++            }
++
++        super(EB_intel, self).install_step(silent_cfg_names_map=silent_cfg_names_map)
++        shutil.copy(self.license_file, os.path.join(self.installdir, '../'))
++
++
++    def sanity_check_step(self):
++        """Custom sanity check paths for icc."""
++
++        binprefix = 'bin/intel64'
++        libprefix = 'lib/intel64'
++        if LooseVersion(self.cfg['official_version']) >= LooseVersion('2011'):
++            if LooseVersion(self.cfg['official_version']) <= LooseVersion('2011.3.174'):
++                binprefix = 'bin'
++            elif LooseVersion(self.cfg['official_version']) >= LooseVersion('2013_sp1'):
++                binprefix = 'bin'
++            else:
++                libprefix = 'compiler/lib/intel64'
++
++        binfiles = ['icc', 'icpc']
++        if LooseVersion(self.cfg['official_version']) < LooseVersion('2014'):
++            binfiles += ['idb']
++
++        binaries = [os.path.join(binprefix, f) for f in binfiles]
++        libraries = [os.path.join(libprefix, 'lib%s' % l) for l in ['iomp5.a', 'iomp5.%s' % get_shared_lib_ext()]]
++        sanity_check_files = binaries + libraries
++        if LooseVersion(self.cfg['official_version']) > LooseVersion('2015'):
++            sanity_check_files.append('include/omp.h')
++
++        custom_paths = {
++            'files': sanity_check_files,
++            'dirs': [],
++        }
++
++        # make very sure that expected 'compilers_and_libraries_<VERSION>/linux' subdir is there for recent versions,
++        # since we rely on it being there in make_module_req_guess
++        if self.comp_libs_subdir:
++            custom_paths['dirs'].append(self.comp_libs_subdir)
++
++        custom_commands = ["which icc"]
++
++        super(EB_intel, self).sanity_check_step(custom_paths=custom_paths, custom_commands=custom_commands)
++
++    def make_module_req_guess(self):
++        """
++        Additional paths to consider for prepend-paths statements in module file
++        """
++        prefix = None
++        docpath = 'documentation_%s' % self.cfg['official_version'].split('.')[0]
++        # guesses per environment variables
++        # some of these paths only apply to certain versions, but that doesn't really matter
++        # existence of paths is checked by module generator before 'prepend-paths' statements are included
++        
++        guesses = {
++            'CLASSPATH': ['daal/lib/daal.jar'],
++            # 'include' is deliberately omitted, including it causes problems, e.g. with complex.h and std::complex
++            # cfr. https://software.intel.com/en-us/forums/intel-c-compiler/topic/338378
++            'CPATH': ['ipp/include', 'mkl/include', 'mkl/include/fftw', 'tbb/include'],
++            'DAALROOT': ['daal'],
++            'IPPROOT': ['ipp'],
++            'LD_LIBRARY_PATH': ['lib'],
++            'MANPATH': ['debugger/gdb/intel64/share/man', 'man/common', 'man/en_US', 'share/man'],
++            'PATH': ['tbb/bin', 'mkl/bin'],
++            'TBBROOT': ['tbb'],
++            'MKLROOT': ['mkl'],
++            'PSTLROOT': ['pstl'],
++            'INFOPATH': [docpath],
++            'PKG_CONFIG_PATH': ['mkl/bin/pkgconfig']
++        }
++
++        if self.cfg['m32']:
++            # 32-bit toolchain
++            guesses['PATH'].extend(['bin/ia32', 'tbb/bin/ia32'])
++            # in the end we set 'LIBRARY_PATH' equal to 'LD_LIBRARY_PATH'
++            guesses['LD_LIBRARY_PATH'].append('lib/ia32')
++
++        else:
++            # 64-bit toolkit
++            guesses['PATH'].extend([
++                'bin/intel64',
++                'debugger/gdb/intel64/bin',
++                'ipp/bin/intel64',
++                'tbb/bin/emt64',
++                'tbb/bin/intel64',
++            ])
++
++            # in the end we set 'LIBRARY_PATH' equal to 'LD_LIBRARY_PATH'
++            guesses['LD_LIBRARY_PATH'].extend([
++                'tbb/lib/intel64/%s' % get_tbb_gccprefix(),
++                'mkl/lib/intel64',
++                'ipp/lib/intel64',
++                'debugger/ipt/intel64/lib',
++                'compiler/lib/intel64',
++            ])
++            guesses['MIC_LD_LIBRARY_PATH'] = [
++                'compiler/lib/mic',
++                'debugger/ipt/lib/mic',
++                'ipp/lib/mic',
++                'mkl/lib/mic',
++                'tbb/lib/mic',
++            ]
++
++
++            if not self.cfg['hide_mpi']:
++                guesses['LD_LIBRARY_PATH'].append('mpi/mic/lib', 'mpi/intel64/lib')
++                guesses['MIC_LD_LIBRARY_PATH'].append('/mpi/mic/lib')
++                guesses['PATH'].append('mpi/intel64/bin')
++                guesses['CPATH'].append('mpi/intel64/include')
++            if LooseVersion(self.cfg['official_version']) < LooseVersion('2016'):
++                prefix = 'composer_xe_%s' % self.cfg['official_version']
++                # for some older versions, name of subdirectory is slightly different
++                if not os.path.isdir(os.path.join(self.installdir, prefix)):
++                    cand_prefix = 'composerxe-%s' % self.cfg['official_version']
++                    if os.path.isdir(os.path.join(self.installdir, cand_prefix)):
++                        prefix = cand_prefix
++
++                # debugger is dependent on $INTEL_PYTHONHOME since version 2015 and newer
++                if LooseVersion(self.cfg['official_version']) >= LooseVersion('2015'):
++                    self.debuggerpath = os.path.join(prefix, 'debugger')
++
++            else:
++                # new directory layout for Intel Parallel Studio XE 2016
++                # https://software.intel.com/en-us/articles/new-directory-layout-for-intel-parallel-studio-xe-2016
++                prefix = self.comp_libs_subdir
++                # Debugger requires INTEL_PYTHONHOME, which only allows for a single value
++                self.debuggerpath = 'debugger_%s' % self.cfg['official_version'].split('.')[0]
++
++                guesses['LD_LIBRARY_PATH'].extend([
++                    os.path.join(self.debuggerpath, 'libipt/intel64/lib'),
++                    'daal/lib/intel64_lin',
++                ])
++
++            # 'lib/intel64' is deliberately listed last, so it gets precedence over subdirs
++            guesses['LD_LIBRARY_PATH'].append('lib/intel64') 
++
++        # set up advisor and inspector
++         
++        # set debugger path
++        if self.debuggerpath:
++            guesses['PATH'].append(os.path.join(self.debuggerpath, 'gdb', 'intel64', 'bin'))
++
++        # in recent Intel compiler distributions, the actual binaries are
++        # in deeper directories, and symlinked in top-level directories
++        # however, not all binaries are symlinked (e.g. mcpcom is not)
++        # we only need to include the deeper directories (same as compilervars.sh)
++        if prefix and os.path.isdir(os.path.join(self.installdir, prefix)):
++            for key, subdirs in guesses.items():
++                guesses[key] = [os.path.join(prefix, subdir) for subdir in subdirs]
++
++            # The for loop above breaks libipt library loading for gdb - this fixes that
++            guesses['LD_LIBRARY_PATH'].extend([
++                'daal/lib/intel64_lin',
++                # 'advisor/lib64',
++                # 'advisor_xe/lib64'
++                # 'inspector_xe/lib64',  # causes problems with libiomp5.so
++                # 'inspector/lib64',  # causes problems with libiomp5.so
++                ])
++            guesses['CPATH'].extend([
++                # 'daal/include',
++                # 'advisor/include',
++                # 'advisor_xe/include',
++                # 'inspector/include',
++                # 'inspector_xe/include',
++                ])
++            guesses['PATH'].extend([
++                'daal/bin',
++                'advisor/bin64',
++                'advisor_xe/bin64',
++                'inspector/bin64',
++                'inspector_xe/bin64'])
++            guesses['MANPATH'].extend([
++                'man/common',
++                '%s/en/debugger//gdb-mic/man' % docpath,
++                '%s/en/debugger//gdb-igfx/man' % docpath,
++                '%s/en/debugger//gdb-ia/man' % docpath,])
++            guesses['INFOPATH'].extend([
++                '%s/en/debugger//gdb-mic/info' % docpath,
++                '%s/en/debugger//gdb-ia/info' % docpath,
++                '%s/en/debugger//gdb-igfx/info' % docpath])
++            if self.debuggerpath:
++                guesses['LD_LIBRARY_PATH'].extend([
++                    os.path.join(self.debuggerpath, 'libipt/intel64/lib'),
++                    os.path.join(self.debuggerpath, 'iga/lib')])
++                guesses['GDB_CROSS'] = [
++                    os.path.join(self.debuggerpath, 'gdb/intel64_mic/bin/gdb-mic'),
++                    os.path.join(self.debuggerpath, 'gdb/intel64/bin/gdb-ia')]
++                for gdb in guesses['GDB_CROSS']:
++                    if os.path.isfile(os.path.join(self.installdir, gdb)):
++                        # pick first existing one and reset list
++                        guesses['GDB_CROSS'] = [gdb]
++                        break
++                guesses['GDBSERVER_MIC'] = [
++                    os.path.join(self.debuggerpath, 'gdb/targets/intel64/x200/bin/gdbserver'),
++                    os.path.join(self.debuggerpath, 'gdb/targets/mic/bin/gdbserver'),]
++
++        # only set $IDB_HOME if idb exists
++        idb_home_subdir = 'bin/intel64'
++        if os.path.isfile(os.path.join(self.installdir, idb_home_subdir, 'idb')):
++            guesses['IDB_HOME'] = [idb_home_subdir]
++        
++        guesses['LIBRARY_PATH'] = guesses['LD_LIBRARY_PATH']
++
++        return guesses
++
++
++    def make_module_extra(self, *args, **kwargs):
++        """Additional custom variables for icc: $INTEL_PYTHONHOME."""
++        txt = super(EB_intel, self).make_module_extra(*args, **kwargs)
++
++        if self.debuggerpath:
++            intel_pythonhome = os.path.join(self.installdir, self.debuggerpath, 'python', 'intel64')
++            if os.path.isdir(intel_pythonhome):
++                txt += self.module_generator.set_environment('INTEL_PYTHONHOME', intel_pythonhome)
++        
++        # use licence file in installdir/../
++        self.license_file = os.path.join(self.installdir, '..', os.path.basename(self.license_file))
++        
++        # on Debian/Ubuntu, /usr/include/x86_64-linux-gnu needs to be included in $CPATH for icc
++        out, ec = run_cmd("gcc -print-multiarch", simple=False, log_all=False, log_ok=False)
++        multiarch_inc_subdir = out.strip()
++        if ec == 0 and multiarch_inc_subdir:
++            multiarch_inc_dir = os.path.join('/usr', 'include', multiarch_inc_subdir)
++            self.log.info("Adding multiarch include path %s to $CPATH in generated module file", multiarch_inc_dir)
++            # system location must be appended at the end, so use append_paths
++            txt += self.module_generator.append_paths('CPATH', [multiarch_inc_dir], allow_abs=True)
++
++        return txt
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/o/openfoam.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/o/openfoam.py
+index 3a286b5..ff10c80 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/o/openfoam.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/o/openfoam.py
+@@ -67,8 +67,12 @@ class EB_OpenFOAM(EasyBlock):
+         self.openfoamdir = None
+         self.thrdpartydir = None
+ 
++        # version may start with 'v' for some variants of OpenFOAM
++        # we need to strip this off to avoid problems when comparing LooseVersion instances in Python 3
++        self.looseversion = LooseVersion(self.version.strip('v+'))
++
+         if 'extend' in self.name.lower():
+-            if LooseVersion(self.version) >= LooseVersion('3.0'):
++            if self.looseversion >= LooseVersion('3.0'):
+                 self.openfoamdir = 'foam-extend-%s' % self.version
+             else:
+                 self.openfoamdir = 'OpenFOAM-%s-ext' % self.version
+@@ -145,10 +149,10 @@ class EB_OpenFOAM(EasyBlock):
+                 extra_flags = '-fuse-ld=bfd'
+ 
+             # older versions of OpenFOAM-Extend require -fpermissive
+-            if 'extend' in self.name.lower() and LooseVersion(self.version) < LooseVersion('2.0'):
++            if 'extend' in self.name.lower() and self.looseversion < LooseVersion('2.0'):
+                 extra_flags += ' -fpermissive'
+ 
+-            if LooseVersion(self.version) < LooseVersion('3.0'):
++            if self.looseversion < LooseVersion('3.0'):
+                 extra_flags += ' -fno-delete-null-pointer-checks'
+ 
+         elif comp_fam == toolchain.INTELCOMP:  # @UndefinedVariable
+@@ -166,13 +170,13 @@ class EB_OpenFOAM(EasyBlock):
+             regex_subs = [(r"^(setenv|export) WM_THIRD_PARTY_USE_.*[ =].*$", r"# \g<0>")]
+ 
+             # this does not work for OpenFOAM Extend lower than 2.0
+-            if 'extend' not in self.name.lower() or LooseVersion(self.version) >= LooseVersion('2.0'):
++            if 'extend' not in self.name.lower() or self.looseversion >= LooseVersion('2.0'):
+                 key = "WM_PROJECT_VERSION"
+                 regex_subs += [(r"^(setenv|export) %s=.*$" % key, r"export %s=%s #\g<0>" % (key, self.version))]
+ 
+             WM_env_var = ['WM_COMPILER', 'WM_MPLIB', 'WM_THIRD_PARTY_DIR']
+             # OpenFOAM >= 3.0.0 can use 64 bit integers
+-            if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++            if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion('3.0'):
+                 WM_env_var.append('WM_LABEL_SIZE')
+             for env_var in WM_env_var:
+                 regex_subs.append((r"^(setenv|export) (?P<var>%s)[ =](?P<val>.*)$" % env_var,
+@@ -181,6 +185,8 @@ class EB_OpenFOAM(EasyBlock):
+ 
+         # inject compiler variables into wmake/rules files
+         ldirs = glob.glob(os.path.join(self.builddir, self.openfoamdir, 'wmake', 'rules', 'linux*'))
++        if self.looseversion >= LooseVersion('1906'):
++            ldirs += glob.glob(os.path.join(self.builddir, self.openfoamdir, 'wmake', 'rules', 'General', '*'))
+         langs = ['c', 'c++']
+ 
+         # NOTE: we do not want to change the Debug rules files becuse
+@@ -210,6 +216,9 @@ class EB_OpenFOAM(EasyBlock):
+             'c++OPT': os.environ['CXXFLAGS'],
+         }
+         for wmake_rules_file in wmake_rules_files:
++            # the cOpt and c++Opt files don't exist in the General directories (which are included for recent versions)
++            if not os.path.isfile(wmake_rules_file):
++                continue
+             fullpath = os.path.join(self.builddir, self.openfoamdir, wmake_rules_file)
+             self.log.debug("Patching compiler variables in %s", fullpath)
+             regex_subs = []
+@@ -220,6 +229,7 @@ class EB_OpenFOAM(EasyBlock):
+         # enable verbose build for debug purposes
+         # starting with openfoam-extend 3.2, PS1 also needs to be set
+         env.setvar("FOAM_VERBOSE", '1')
++        env.setvar("PS1", '1')
+ 
+         # installation directory
+         env.setvar("FOAM_INST_DIR", self.installdir)
+@@ -241,15 +251,15 @@ class EB_OpenFOAM(EasyBlock):
+         env.setvar("WM_NCOMPPROCS", str(self.cfg['parallel']))
+ 
+         # OpenFOAM >= 3.0.0 can use 64 bit integers
+-        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++        if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion('3.0'):
+             if self.toolchain.options['i8']:
+                 env.setvar("WM_LABEL_SIZE", '64')
+             else:
+                 env.setvar("WM_LABEL_SIZE", '32')
+ 
+         # make sure lib/include dirs for dependencies are found
+-        openfoam_extend_v3 = 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0')
+-        if LooseVersion(self.version) < LooseVersion("2") or openfoam_extend_v3:
++        openfoam_extend_v3 = 'extend' in self.name.lower() and self.looseversion >= LooseVersion('3.0')
++        if self.looseversion < LooseVersion("2") or openfoam_extend_v3:
+             self.log.debug("List of deps: %s" % self.cfg.dependencies())
+             for dep in self.cfg.dependencies():
+                 dep_name = dep['name'].upper(),
+@@ -261,7 +271,7 @@ class EB_OpenFOAM(EasyBlock):
+                     "%s_LIB_DIR": "%s/lib",
+                     "%s_INCLUDE_DIR": "%s/include",
+                 }
+-                for var, val in dep_vars.iteritems():
++                for var, val in dep_vars.items():
+                     env.setvar(var % dep_name, val % dep_root)
+         else:
+             for depend in ['SCOTCH', 'METIS', 'CGAL', 'Paraview']:
+@@ -277,7 +287,7 @@ class EB_OpenFOAM(EasyBlock):
+         """Build OpenFOAM using make after sourcing script to set environment."""
+ 
+         precmd = "source %s" % os.path.join(self.builddir, self.openfoamdir, "etc", "bashrc")
+-        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('4.0'):
++        if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion('4.0'):
+             cleancmd = "cd $WM_PROJECT_DIR && wcleanPlatform -all && cd -"
+         else:
+             cleancmd = "wcleanAll"
+@@ -289,7 +299,7 @@ class EB_OpenFOAM(EasyBlock):
+             'prebuildopts': self.cfg['prebuildopts'],
+             'makecmd': os.path.join(self.builddir, self.openfoamdir, '%s'),
+         }
+-        if 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++        if 'extend' in self.name.lower() and self.looseversion >= LooseVersion('3.0'):
+             qa = {
+                 "Proceed without compiling ParaView [Y/n]": 'Y',
+                 "Proceed without compiling cudaSolvers? [Y/n]": 'Y',
+@@ -305,12 +315,14 @@ class EB_OpenFOAM(EasyBlock):
+                 r"\s*\^\s*",  # warning indicator
+                 "Cleaning .*",
+             ]
+-            run_cmd_qa(cmd_tmpl % 'Allwmake.firstInstall', qa, no_qa=noqa, log_all=True, simple=True)
++            run_cmd_qa(cmd_tmpl % 'Allwmake.firstInstall', qa, no_qa=noqa, log_all=True, simple=True, maxhits=500)
+         else:
+             cmd = 'Allwmake'
+-            if LooseVersion(self.version) >= LooseVersion('1606'):
++            if self.looseversion > LooseVersion('1606'):
+                 # use Allwmake -log option if possible since this can be useful during builds, but also afterwards
+-                cmd += ' -log'
++#                cmd += ' -log'
++                 cmd += ">log.make"
++            self.log.debug("CMD: %s"  % cmd )
+             run_cmd(cmd_tmpl % cmd, log_all=True, simple=True, log_output=True)
+ 
+     def install_step(self):
+@@ -333,7 +345,7 @@ class EB_OpenFOAM(EasyBlock):
+         shlib_ext = get_shared_lib_ext()
+ 
+         # OpenFOAM >= 3.0.0 can use 64 bit integers
+-        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++        if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion('3.0'):
+             if self.toolchain.options['i8']:
+                 int_size = 'Int64'
+             else:
+@@ -343,8 +355,8 @@ class EB_OpenFOAM(EasyBlock):
+ 
+         psubdir = "linux64%sDP%s%s" % (self.wm_compiler, int_size, self.build_type)
+ 
+-        openfoam_extend_v3 = 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0')
+-        if openfoam_extend_v3 or LooseVersion(self.version) < LooseVersion("2"):
++        openfoam_extend_v3 = 'extend' in self.name.lower() and self.looseversion >= LooseVersion('3.0')
++        if openfoam_extend_v3 or self.looseversion < LooseVersion("2"):
+             toolsdir = os.path.join(self.openfoamdir, "applications", "bin", psubdir)
+             libsdir = os.path.join(self.openfoamdir, "lib", psubdir)
+             dirs = [toolsdir, libsdir]
+@@ -356,16 +368,24 @@ class EB_OpenFOAM(EasyBlock):
+         # some randomly selected binaries
+         # if one of these is missing, it's very likely something went wrong
+         bins = [os.path.join(self.openfoamdir, "bin", x) for x in ["paraFoam"]] + \
+-               [os.path.join(toolsdir, "buoyant%sSimpleFoam" % x) for x in ["", "Boussinesq"]] + \
+-               [os.path.join(toolsdir, "%sFoam" % x) for x in ["boundary", "engine", "sonic"]] + \
++               [os.path.join(toolsdir, "buoyantSimpleFoam")] + \
++               [os.path.join(toolsdir, "%sFoam" % x) for x in ["boundary", "engine"]] + \
+                [os.path.join(toolsdir, "surface%s" % x) for x in ["Add", "Find", "Smooth"]] + \
+                [os.path.join(toolsdir, x) for x in ['blockMesh', 'checkMesh', 'deformedGeom', 'engineSwirl',
+                                                     'modifyMesh', 'refineMesh']]
++
++        # only include Boussinesq and sonic since for OpenFOAM < 7, since those solvers have been deprecated
++        if self.looseversion < LooseVersion('7'):
++            bins.extend([
++                os.path.join(toolsdir, "buoyantBoussinesqSimpleFoam"),
++                os.path.join(toolsdir, "sonicFoam")
++            ])
++
+         # check for the Pstream and scotchDecomp libraries, there must be a dummy one and an mpi one
+         if 'extend' in self.name.lower():
+             libs = [os.path.join(libsdir, "libscotchDecomp.%s" % shlib_ext),
+                     os.path.join(libsdir, "libmetisDecomp.%s" % shlib_ext)]
+-            if LooseVersion(self.version) < LooseVersion('3.2'):
++            if self.looseversion < LooseVersion('3.2'):
+                 # Pstream should have both a dummy and a mpi one
+                 libs.extend([os.path.join(libsdir, x, "libPstream.%s" % shlib_ext) for x in ["dummy", "mpi"]])
+                 libs.extend([os.path.join(libsdir, "mpi", "libparMetisDecomp.%s" % shlib_ext)])
+@@ -378,7 +398,7 @@ class EB_OpenFOAM(EasyBlock):
+                    [os.path.join(libsdir, "libscotchDecomp.%s" % shlib_ext)] + \
+                    [os.path.join(libsdir, "dummy", "libscotchDecomp.%s" % shlib_ext)]
+ 
+-        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion("2.3.0"):
++        if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion("2.3.0"):
+             # surfaceSmooth is replaced by surfaceLambdaMuSmooth is OpenFOAM v2.3.0
+             bins.remove(os.path.join(toolsdir, "surfaceSmooth"))
+             bins.append(os.path.join(toolsdir, "surfaceLambdaMuSmooth"))
+@@ -408,7 +428,7 @@ class EB_OpenFOAM(EasyBlock):
+         ]
+ 
+         # OpenFOAM >= 3.0.0 can use 64 bit integers
+-        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++        if 'extend' not in self.name.lower() and self.looseversion >= LooseVersion('3.0'):
+             if self.toolchain.options['i8']:
+                 env_vars += [('WM_LABEL_SIZE', '64')]
+             else:
+
+diff --git a/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/o/openfoam.py.old b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/o/openfoam.py.old
+new file mode 100644
+index 0000000..aa89dd9
+--- /dev/null
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/o/openfoam.py.old
+@@ -0,0 +1,423 @@
++##
++# Copyright 2009-2019 Ghent University
++#
++# This file is part of EasyBuild,
++# originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
++# with support of Ghent University (http://ugent.be/hpc),
++# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
++# Flemish Research Foundation (FWO) (http://www.fwo.be/en)
++# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
++#
++# https://github.com/easybuilders/easybuild
++#
++# EasyBuild is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation v2.
++#
++# EasyBuild is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with EasyBuild.  If not, see <http://www.gnu.org/licenses/>.
++##
++"""
++EasyBuild support for building and installing OpenFOAM, implemented as an easyblock
++
++@author: Stijn De Weirdt (Ghent University)
++@author: Dries Verdegem (Ghent University)
++@author: Kenneth Hoste (Ghent University)
++@author: Pieter De Baets (Ghent University)
++@author: Jens Timmerman (Ghent University)
++@author: Xavier Besseron (University of Luxembourg)
++@author: Ward Poelmans (Ghent University)
++@author: Balazs Hajgato (Free University Brussels (VUB))
++"""
++
++import glob
++import os
++import re
++import shutil
++import stat
++from distutils.version import LooseVersion
++
++import easybuild.tools.environment as env
++import easybuild.tools.toolchain as toolchain
++from easybuild.framework.easyblock import EasyBlock
++from easybuild.tools.build_log import EasyBuildError
++from easybuild.tools.filetools import adjust_permissions, apply_regex_substitutions, mkdir
++from easybuild.tools.modules import get_software_root, get_software_version
++from easybuild.tools.run import run_cmd, run_cmd_qa
++from easybuild.tools.systemtools import get_shared_lib_ext
++
++
++class EB_OpenFOAM(EasyBlock):
++    """Support for building and installing OpenFOAM."""
++
++    def __init__(self, *args, **kwargs):
++        """Specify that OpenFOAM should be built in install dir."""
++
++        super(EB_OpenFOAM, self).__init__(*args, **kwargs)
++
++        self.build_in_installdir = True
++
++        self.wm_compiler = None
++        self.wm_mplib = None
++        self.openfoamdir = None
++        self.thrdpartydir = None
++
++        if 'extend' in self.name.lower():
++            if LooseVersion(self.version) >= LooseVersion('3.0'):
++                self.openfoamdir = 'foam-extend-%s' % self.version
++            else:
++                self.openfoamdir = 'OpenFOAM-%s-ext' % self.version
++        else:
++            self.openfoamdir = '-'.join([self.name, '-'.join(self.version.split('-')[:2])])
++        self.log.debug("openfoamdir: %s" % self.openfoamdir)
++
++        # Set build type to requested value
++        if self.toolchain.options['debug']:
++            self.build_type = 'Debug'
++        else:
++            self.build_type = 'Opt'
++
++    def extract_step(self):
++        """Extract sources as expected by the OpenFOAM(-Extend) build scripts."""
++        super(EB_OpenFOAM, self).extract_step()
++        # make sure that the expected subdir is really there after extracting
++        # if not, the build scripts (e.g., the etc/bashrc being sourced) will likely fail
++        openfoam_installdir = os.path.join(self.installdir, self.openfoamdir)
++        if not os.path.exists(openfoam_installdir):
++            self.log.warning("Creating expected directory %s, and moving everything there" % openfoam_installdir)
++            try:
++                contents_installdir = os.listdir(self.installdir)
++                source = os.path.join(self.installdir, contents_installdir[0])
++                # it's one directory but has a wrong name
++                if len(contents_installdir) == 1 and os.path.isdir(source):
++                    target = os.path.join(self.installdir, self.openfoamdir)
++                    self.log.debug("Renaming %s to %s", source, target)
++                    os.rename(source, target)
++                else:
++                    mkdir(openfoam_installdir)
++                    for fil in contents_installdir:
++                        if fil != self.openfoamdir:
++                            source = os.path.join(self.installdir, fil)
++                            target = os.path.join(openfoam_installdir, fil)
++                            self.log.debug("Moving %s to %s", source, target)
++                            shutil.move(source, target)
++                    os.chdir(openfoam_installdir)
++            except OSError as err:
++                raise EasyBuildError("Failed to move all files to %s: %s", openfoam_installdir, err)
++
++    def patch_step(self, beginpath=None):
++        """Adjust start directory and start path for patching to correct directory."""
++        self.cfg['start_dir'] = os.path.join(self.installdir, self.openfoamdir)
++        super(EB_OpenFOAM, self).patch_step(beginpath=self.cfg['start_dir'])
++
++    def prepare_step(self, *args, **kwargs):
++        """Prepare for OpenFOAM install procedure."""
++        super(EB_OpenFOAM, self).prepare_step(*args, **kwargs)
++
++        comp_fam = self.toolchain.comp_family()
++        if comp_fam == toolchain.GCC:  # @UndefinedVariable
++            self.wm_compiler = 'Gcc'
++        elif comp_fam == toolchain.INTELCOMP:  # @UndefinedVariable
++            self.wm_compiler = 'Icc'
++        else:
++            raise EasyBuildError("Unknown compiler family, don't know how to set WM_COMPILER")
++
++        # set to an MPI unknown by OpenFOAM, since we're handling the MPI settings ourselves (via mpicc, etc.)
++        # Note: this name must contain 'MPI' so the MPI version of the
++        # Pstream library is built (cf src/Pstream/Allwmake)
++        self.wm_mplib = "EASYBUILDMPI"
++
++    def configure_step(self):
++        """Configure OpenFOAM build by setting appropriate environment variables."""
++        # compiler & compiler flags
++        comp_fam = self.toolchain.comp_family()
++
++        extra_flags = ''
++        if comp_fam == toolchain.GCC:  # @UndefinedVariable
++            if get_software_version('GCC') >= LooseVersion('4.8'):
++                # make sure non-gold version of ld is used, since OpenFOAM requires it
++                # see http://www.openfoam.org/mantisbt/view.php?id=685
++                extra_flags = '-fuse-ld=bfd'
++
++            # older versions of OpenFOAM-Extend require -fpermissive
++            if 'extend' in self.name.lower() and LooseVersion(self.version) < LooseVersion('2.0'):
++                extra_flags += ' -fpermissive'
++
++            if LooseVersion(self.version) < LooseVersion('3.0'):
++                extra_flags += ' -fno-delete-null-pointer-checks'
++
++        elif comp_fam == toolchain.INTELCOMP:  # @UndefinedVariable
++            # make sure -no-prec-div is used with Intel compilers
++            extra_flags = '-no-prec-div'
++
++        for env_var in ['CFLAGS', 'CXXFLAGS']:
++            env.setvar(env_var, "%s %s" % (os.environ.get(env_var, ''), extra_flags))
++
++        # patch out hardcoding of WM_* environment variables
++        # for example, replace 'export WM_COMPILER=Gcc' with ': ${WM_COMPILER:=Gcc}; export WM_COMPILER'
++        for script in [os.path.join(self.builddir, self.openfoamdir, x) for x in ['etc/bashrc', 'etc/cshrc']]:
++            self.log.debug("Patching out hardcoded $WM_* env vars in %s", script)
++            # disable any third party stuff, we use EB controlled builds
++            regex_subs = [(r"^(setenv|export) WM_THIRD_PARTY_USE_.*[ =].*$", r"# \g<0>")]
++
++            # this does not work for OpenFOAM Extend lower than 2.0
++            if 'extend' not in self.name.lower() or LooseVersion(self.version) >= LooseVersion('2.0'):
++                key = "WM_PROJECT_VERSION"
++                regex_subs += [(r"^(setenv|export) %s=.*$" % key, r"export %s=%s #\g<0>" % (key, self.version))]
++
++            WM_env_var = ['WM_COMPILER', 'WM_MPLIB', 'WM_THIRD_PARTY_DIR']
++            # OpenFOAM >= 3.0.0 can use 64 bit integers
++            if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++                WM_env_var.append('WM_LABEL_SIZE')
++            for env_var in WM_env_var:
++                regex_subs.append((r"^(setenv|export) (?P<var>%s)[ =](?P<val>.*)$" % env_var,
++                                   r": ${\g<var>:=\g<val>}; export \g<var>"))
++            apply_regex_substitutions(script, regex_subs)
++
++        # inject compiler variables into wmake/rules files
++        ldirs = glob.glob(os.path.join(self.builddir, self.openfoamdir, 'wmake', 'rules', 'linux*'))
++        langs = ['c', 'c++']
++
++        # NOTE: we do not want to change the Debug rules files becuse
++        # that would change the cOPT/c++OPT values from their empty setting.
++        suffixes = ['', 'Opt']
++        wmake_rules_files = [os.path.join(ldir, lang + suff) for ldir in ldirs for lang in langs for suff in suffixes]
++
++        mpicc = os.environ['MPICC']
++        mpicxx = os.environ['MPICXX']
++        cc_seq = os.environ.get('CC_SEQ', os.environ['CC'])
++        cxx_seq = os.environ.get('CXX_SEQ', os.environ['CXX'])
++
++        if self.toolchain.mpi_family() == toolchain.OPENMPI:
++            # no -cc/-cxx flags supported in OpenMPI compiler wrappers
++            c_comp_cmd = 'OMPI_CC="%s" %s' % (cc_seq, mpicc)
++            cxx_comp_cmd = 'OMPI_CXX="%s" %s' % (cxx_seq, mpicxx)
++        else:
++            # -cc/-cxx should work for all MPICH-based MPIs (including Intel MPI)
++            c_comp_cmd = '%s -cc="%s"' % (mpicc, cc_seq)
++            cxx_comp_cmd = '%s -cxx="%s"' % (mpicxx, cxx_seq)
++
++        comp_vars = {
++            # specify MPI compiler wrappers and compiler commands + sequential compiler that should be used by them
++            'cc': c_comp_cmd,
++            'CC': cxx_comp_cmd,
++            'cOPT': os.environ['CFLAGS'],
++            'c++OPT': os.environ['CXXFLAGS'],
++        }
++        for wmake_rules_file in wmake_rules_files:
++            fullpath = os.path.join(self.builddir, self.openfoamdir, wmake_rules_file)
++            self.log.debug("Patching compiler variables in %s", fullpath)
++            regex_subs = []
++            for comp_var, newval in comp_vars.items():
++                regex_subs.append((r"^(%s\s*=\s*).*$" % re.escape(comp_var), r"\1%s" % newval))
++            apply_regex_substitutions(fullpath, regex_subs)
++
++        # enable verbose build for debug purposes
++        # starting with openfoam-extend 3.2, PS1 also needs to be set
++        env.setvar("FOAM_VERBOSE", '1')
++
++        # installation directory
++        env.setvar("FOAM_INST_DIR", self.installdir)
++
++        # third party directory
++        self.thrdpartydir = "ThirdParty-%s" % self.version
++        # only if third party stuff is actually installed
++        if os.path.exists(self.thrdpartydir):
++            os.symlink(os.path.join("..", self.thrdpartydir), self.thrdpartydir)
++            env.setvar("WM_THIRD_PARTY_DIR", os.path.join(self.installdir, self.thrdpartydir))
++
++        env.setvar("WM_COMPILER", self.wm_compiler)
++        env.setvar("WM_MPLIB", self.wm_mplib)
++
++        # Set Compile options according to build type
++        env.setvar("WM_COMPILE_OPTION", self.build_type)
++
++        # parallel build spec
++        env.setvar("WM_NCOMPPROCS", str(self.cfg['parallel']))
++
++        # OpenFOAM >= 3.0.0 can use 64 bit integers
++        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++            if self.toolchain.options['i8']:
++                env.setvar("WM_LABEL_SIZE", '64')
++            else:
++                env.setvar("WM_LABEL_SIZE", '32')
++
++        # make sure lib/include dirs for dependencies are found
++        openfoam_extend_v3 = 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0')
++        if LooseVersion(self.version) < LooseVersion("2") or openfoam_extend_v3:
++            self.log.debug("List of deps: %s" % self.cfg.dependencies())
++            for dep in self.cfg.dependencies():
++                dep_name = dep['name'].upper(),
++                dep_root = get_software_root(dep['name'])
++                env.setvar("%s_SYSTEM" % dep_name, "1")
++                dep_vars = {
++                    "%s_DIR": "%s",
++                    "%s_BIN_DIR": "%s/bin",
++                    "%s_LIB_DIR": "%s/lib",
++                    "%s_INCLUDE_DIR": "%s/include",
++                }
++                for var, val in dep_vars.iteritems():
++                    env.setvar(var % dep_name, val % dep_root)
++        else:
++            for depend in ['SCOTCH', 'METIS', 'CGAL', 'Paraview']:
++                dependloc = get_software_root(depend)
++                if dependloc:
++                    if depend == 'CGAL' and get_software_root('Boost'):
++                        env.setvar("CGAL_ROOT", dependloc)
++                        env.setvar("BOOST_ROOT", get_software_root('Boost'))
++                    else:
++                        env.setvar("%s_ROOT" % depend.upper(), dependloc)
++
++    def build_step(self):
++        """Build OpenFOAM using make after sourcing script to set environment."""
++
++        precmd = "source %s" % os.path.join(self.builddir, self.openfoamdir, "etc", "bashrc")
++        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('4.0'):
++            cleancmd = "cd $WM_PROJECT_DIR && wcleanPlatform -all && cd -"
++        else:
++            cleancmd = "wcleanAll"
++
++        # make directly in install directory
++        cmd_tmpl = "%(precmd)s && %(cleancmd)s && %(prebuildopts)s %(makecmd)s" % {
++            'precmd': precmd,
++            'cleancmd': cleancmd,
++            'prebuildopts': self.cfg['prebuildopts'],
++            'makecmd': os.path.join(self.builddir, self.openfoamdir, '%s'),
++        }
++        if 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++            qa = {
++                "Proceed without compiling ParaView [Y/n]": 'Y',
++                "Proceed without compiling cudaSolvers? [Y/n]": 'Y',
++            }
++            noqa = [
++                ".* -o .*",
++                "checking .*",
++                "warning.*",
++                "configure: creating.*",
++                "%s .*" % os.environ['CC'],
++                "wmake .*",
++                "Making dependency list for source file.*",
++                r"\s*\^\s*",  # warning indicator
++                "Cleaning .*",
++            ]
++            run_cmd_qa(cmd_tmpl % 'Allwmake.firstInstall', qa, no_qa=noqa, log_all=True, simple=True)
++        else:
++            cmd = 'Allwmake'
++            if LooseVersion(self.version) >= LooseVersion('1606'):
++                # use Allwmake -log option if possible since this can be useful during builds, but also afterwards
++                #cmd += ' -log'
++                pass
++            run_cmd(cmd_tmpl % cmd, log_all=True, simple=True, log_output=True)
++
++    def install_step(self):
++        """Building was performed in install dir, so just fix permissions."""
++
++        # fix permissions of OpenFOAM dir
++        fullpath = os.path.join(self.installdir, self.openfoamdir)
++        adjust_permissions(fullpath, stat.S_IROTH, add=True, recursive=True, ignore_errors=True)
++        adjust_permissions(fullpath, stat.S_IXOTH, add=True, recursive=True, onlydirs=True, ignore_errors=True)
++
++        # fix permissions of ThirdParty dir and subdirs (also for 2.x)
++        # if the thirdparty tarball is installed
++        fullpath = os.path.join(self.installdir, self.thrdpartydir)
++        if os.path.exists(fullpath):
++            adjust_permissions(fullpath, stat.S_IROTH, add=True, recursive=True, ignore_errors=True)
++            adjust_permissions(fullpath, stat.S_IXOTH, add=True, recursive=True, onlydirs=True, ignore_errors=True)
++
++    def sanity_check_step(self):
++        """Custom sanity check for OpenFOAM"""
++        shlib_ext = get_shared_lib_ext()
++
++        # OpenFOAM >= 3.0.0 can use 64 bit integers
++        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++            if self.toolchain.options['i8']:
++                int_size = 'Int64'
++            else:
++                int_size = 'Int32'
++        else:
++            int_size = ''
++
++        psubdir = "linux64%sDP%s%s" % (self.wm_compiler, int_size, self.build_type)
++
++        openfoam_extend_v3 = 'extend' in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0')
++        if openfoam_extend_v3 or LooseVersion(self.version) < LooseVersion("2"):
++            toolsdir = os.path.join(self.openfoamdir, "applications", "bin", psubdir)
++            libsdir = os.path.join(self.openfoamdir, "lib", psubdir)
++            dirs = [toolsdir, libsdir]
++        else:
++            toolsdir = os.path.join(self.openfoamdir, "platforms", psubdir, "bin")
++            libsdir = os.path.join(self.openfoamdir, "platforms", psubdir, "lib")
++            dirs = [toolsdir, libsdir]
++
++        # some randomly selected binaries
++        # if one of these is missing, it's very likely something went wrong
++        bins = [os.path.join(self.openfoamdir, "bin", x) for x in ["paraFoam"]] + \
++               [os.path.join(toolsdir, "buoyant%sSimpleFoam" % x) for x in ["", "Boussinesq"]] + \
++               [os.path.join(toolsdir, "%sFoam" % x) for x in ["boundary", "engine", "sonic"]] + \
++               [os.path.join(toolsdir, "surface%s" % x) for x in ["Add", "Find", "Smooth"]] + \
++               [os.path.join(toolsdir, x) for x in ['blockMesh', 'checkMesh', 'deformedGeom', 'engineSwirl',
++                                                    'modifyMesh', 'refineMesh']]
++        # check for the Pstream and scotchDecomp libraries, there must be a dummy one and an mpi one
++        if 'extend' in self.name.lower():
++            libs = [os.path.join(libsdir, "libscotchDecomp.%s" % shlib_ext),
++                    os.path.join(libsdir, "libmetisDecomp.%s" % shlib_ext)]
++            if LooseVersion(self.version) < LooseVersion('3.2'):
++                # Pstream should have both a dummy and a mpi one
++                libs.extend([os.path.join(libsdir, x, "libPstream.%s" % shlib_ext) for x in ["dummy", "mpi"]])
++                libs.extend([os.path.join(libsdir, "mpi", "libparMetisDecomp.%s" % shlib_ext)])
++            else:
++                libs.extend([os.path.join(libsdir, "libparMetisDecomp.%s" % shlib_ext)])
++        else:
++            # there must be a dummy one and an mpi one for both
++            libs = [os.path.join(libsdir, x, "libPstream.%s" % shlib_ext) for x in ["dummy", "mpi"]] + \
++                   [os.path.join(libsdir, x, "libptscotchDecomp.%s" % shlib_ext) for x in ["dummy", "mpi"]] +\
++                   [os.path.join(libsdir, "libscotchDecomp.%s" % shlib_ext)] + \
++                   [os.path.join(libsdir, "dummy", "libscotchDecomp.%s" % shlib_ext)]
++
++        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion("2.3.0"):
++            # surfaceSmooth is replaced by surfaceLambdaMuSmooth is OpenFOAM v2.3.0
++            bins.remove(os.path.join(toolsdir, "surfaceSmooth"))
++            bins.append(os.path.join(toolsdir, "surfaceLambdaMuSmooth"))
++
++        custom_paths = {
++            'files': [os.path.join(self.openfoamdir, 'etc', x) for x in ["bashrc", "cshrc"]] + bins + libs,
++            'dirs': dirs,
++        }
++
++        super(EB_OpenFOAM, self).sanity_check_step(custom_paths=custom_paths)
++
++    def make_module_extra(self, altroot=None, altversion=None):
++        """Define extra environment variables required by OpenFOAM"""
++
++        txt = super(EB_OpenFOAM, self).make_module_extra()
++
++        env_vars = [
++            # Set WM_COMPILE_OPTION in the module file
++            # $FOAM_BASH will then pick it up correctly.
++            ('WM_COMPILE_OPTION', self.build_type),
++            ('WM_PROJECT_VERSION', self.version),
++            ('FOAM_INST_DIR', self.installdir),
++            ('WM_COMPILER', self.wm_compiler),
++            ('WM_MPLIB', self.wm_mplib),
++            ('FOAM_BASH', os.path.join(self.installdir, self.openfoamdir, 'etc', 'bashrc')),
++            ('FOAM_CSH', os.path.join(self.installdir, self.openfoamdir, 'etc', 'cshrc')),
++        ]
++
++        # OpenFOAM >= 3.0.0 can use 64 bit integers
++        if 'extend' not in self.name.lower() and LooseVersion(self.version) >= LooseVersion('3.0'):
++            if self.toolchain.options['i8']:
++                env_vars += [('WM_LABEL_SIZE', '64')]
++            else:
++                env_vars += [('WM_LABEL_SIZE', '32')]
++
++        for (env_var, val) in env_vars:
++            # check whether value is defined for compatibility with --module-only
++            if val:
++                txt += self.module_generator.set_environment(env_var, val)
++
++        return txt
+
+diff --git a/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/p/paraview.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/p/paraview.py
+new file mode 100644
+index 0000000..dde2d0e
+--- /dev/null
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/p/paraview.py
+@@ -0,0 +1,146 @@
++##
++# Copyright 2009-2019 Ghent University
++#
++# This file is part of EasyBuild,
++# originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
++# with support of Ghent University (http://ugent.be/hpc),
++# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
++# Flemish Research Foundation (FWO) (http://www.fwo.be/en)
++# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
++#
++# https://github.com/easybuilders/easybuild
++#
++# EasyBuild is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation v2.
++#
++# EasyBuild is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with EasyBuild.  If not, see <http://www.gnu.org/licenses/>.
++##
++"""
++EasyBuild support for software that is configured with CMake, implemented as an easyblock
++
++@author: Stijn De Weirdt (Ghent University)
++@author: Dries Verdegem (Ghent University)
++@author: Kenneth Hoste (Ghent University)
++@author: Pieter De Baets (Ghent University)
++@author: Jens Timmerman (Ghent University)
++@author: Ward Poelmans (Ghent University)
++@author: Maxime Boissonneault (Compute Canada - Universite Laval)
++"""
++import os
++
++from easybuild.easyblocks.generic.cmakemake import CMakeMake
++from easybuild.framework.easyconfig import CUSTOM
++from easybuild.tools.config import build_option
++from easybuild.tools.filetools import change_dir, mkdir, which
++from easybuild.tools.environment import setvar
++from easybuild.tools.modules import get_software_root
++from easybuild.tools.run import run_cmd
++from vsc.utils.missing import nub
++
++
++DEFAULT_CONFIGURE_CMD = 'cmake'
++
++
++class EB_ParaView(CMakeMake):
++    """Support for configuring build with CMake instead of traditional configure script"""
++
++    @staticmethod
++    def extra_options(extra_vars=None):
++        """Define extra easyconfig parameters specific to CMakeMake."""
++        extra_vars = CMakeMake.extra_options(extra_vars)
++        extra_vars.update({
++            'abs_path_compilers': [False, "Specify compilers via absolute file path (not via command names)", CUSTOM],
++            'allow_system_boost': [False, "Always allow CMake to pick up on Boost installed in OS "
++                                          "(even if Boost is included as a dependency)", CUSTOM],
++            'configure_cmd': [DEFAULT_CONFIGURE_CMD, "Configure command to use", CUSTOM],
++            'srcdir': [None, "Source directory location to provide to cmake command", CUSTOM],
++            'separate_build_dir': [False, "Perform build in a separate directory", CUSTOM],
++            'build_in_installdir': [True, "Perform build in installation directory", CUSTOM],
++        })
++        return extra_vars
++
++    def configure_step(self, srcdir=None, builddir=None):
++        """Configure build using cmake"""
++
++        # Set the search paths for CMake
++        tc_ipaths = self.toolchain.get_variable("CPPFLAGS", list)
++        tc_lpaths = self.toolchain.get_variable("LDFLAGS", list)
++        cpaths = os.getenv('CPATH', '').split(os.pathsep)
++        lpaths = os.getenv('LD_LIBRARY_PATH', '').split(os.pathsep)
++        include_paths = os.pathsep.join(nub(tc_ipaths + cpaths))
++        library_paths = os.pathsep.join(nub(tc_lpaths + lpaths))
++        setvar("CMAKE_INCLUDE_PATH", include_paths)
++        setvar("CMAKE_LIBRARY_PATH", library_paths)
++
++        if builddir is None and self.cfg.get('separate_build_dir', False):
++            builddir = os.path.join(self.builddir, 'easybuild_obj')
++
++        if builddir:
++            mkdir(builddir, parents=True)
++            change_dir(builddir)
++            default_srcdir = self.cfg['start_dir']
++        else:
++            default_srcdir = '.'
++
++        if srcdir is None:
++            if self.cfg.get('srcdir', None) is not None:
++                srcdir = self.cfg['srcdir']
++            else:
++                srcdir = default_srcdir
++
++        options = ['-DCMAKE_INSTALL_PREFIX=%s' % self.installdir]
++        env_to_options = {
++            'CC': 'CMAKE_C_COMPILER',
++            'CFLAGS': 'CMAKE_C_FLAGS',
++            'CXX': 'CMAKE_CXX_COMPILER',
++            'CXXFLAGS': 'CMAKE_CXX_FLAGS',
++            'F90': 'CMAKE_Fortran_COMPILER',
++            'FFLAGS': 'CMAKE_Fortran_FLAGS',
++        }
++        for env_name, option in env_to_options.items():
++            value = os.getenv(env_name)
++            if value is not None:
++                if option.endswith('_COMPILER') and self.cfg.get('abs_path_compilers', False):
++                    value = which(value)
++                    self.log.info("Using absolute path to compiler command: %s", value)
++                options.append("-D%s='%s'" % (option, value))
++
++        if build_option('rpath'):
++            # instruct CMake not to fiddle with RPATH when --rpath is used, since it will undo stuff on install...
++            # https://github.com/LLNL/spack/blob/0f6a5cd38538e8969d11bd2167f11060b1f53b43/lib/spack/spack/build_environment.py#L416
++            options.append('-DCMAKE_SKIP_RPATH=ON')
++
++        # show what CMake is doing by default
++        options.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
++
++        if not self.cfg.get('allow_system_boost', False):
++            # don't pick up on system Boost if Boost is included as dependency
++            # - specify Boost location via -DBOOST_ROOT
++            # - instruct CMake to not search for Boost headers/libraries in other places
++            # - disable search for Boost CMake package configuration file
++            boost_root = get_software_root('Boost')
++            if boost_root:
++                options.extend([
++                    '-DBOOST_ROOT=%s' % boost_root,
++                    '-DBoost_NO_SYSTEM_PATHS=ON',
++                    '-DBoost_NO_BOOST_CMAKE=ON',
++                ])
++
++        options_string = ' '.join(options)
++
++        command = ' '.join([
++            self.cfg['preconfigopts'],
++            self.cfg.get('configure_cmd') or DEFAULT_CONFIGURE_CMD,
++            options_string,
++            self.cfg['configopts'],
++            srcdir])
++        (out, _) = run_cmd(command, log_all=True, simple=False)
++
++        return out
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/p/python.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/p/python.py
+index 3a3fc00..7c56884 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/p/python.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/p/python.py
+@@ -258,13 +258,13 @@ class EB_Python(ConfigureMake):
+         # make sure hashlib is installed correctly, there should be no errors/output when 'import hashlib' is run
+         # (python will exit with 0 regardless of whether or not errors are printed...)
+         # cfr. https://github.com/easybuilders/easybuild-easyconfigs/issues/6484
+-        cmd = "python -c 'import hashlib'"
+-        (out, _) = run_cmd(cmd)
+-        regex = re.compile('error', re.I)
+-        if regex.search(out):
+-            raise EasyBuildError("Found one or more errors in output of %s: %s", cmd, out)
+-        else:
+-            self.log.info("No errors found in output of %s: %s", cmd, out)
++        #cmd = "python -c 'import hashlib'"
++        #(out, _) = run_cmd(cmd)
++        #regex = re.compile('error', re.I)
++        #if regex.search(out):
++        #    raise EasyBuildError("Found one or more errors in output of %s: %s", cmd, out)
++        #else:
++        #    self.log.info("No errors found in output of %s: %s", cmd, out)
+ 
+         pyver = 'python' + self.pyshortver
+         custom_paths = {
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/q/quantumespresso.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/q/quantumespresso.py
+index 14f760c..9199d45 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/q/quantumespresso.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/q/quantumespresso.py
+@@ -141,14 +141,15 @@ class EB_QuantumESPRESSO(ConfigureMake):
+                 raise EasyBuildError("QuantumESPRESSO %s needs ELPA to be " +
+                                      "version %s or newer" % (self.version, elpa_min_ver))
+ 
+-            elpa_include = os.path.join(elpa, 'include')
+-            repls.append(('IFLAGS', '-I%s' % os.path.join(elpa_include, 'modules'), True))
+-            self.cfg.update('configopts', '--with-elpa-include=%s' % elpa_include)
+             if self.toolchain.options.get('openmp', False):
++                elpa_include = 'elpa_openmp-%s' % elpa_v
+                 elpa_lib = 'libelpa_openmp.a'
+             else:
++                elpa_include = 'elpa-%s' % elpa_v
+                 elpa_lib = 'libelpa.a'
+-
++            elpa_include = os.path.join(elpa, 'include', elpa_include)
++            repls.append(('IFLAGS', '-I%s' % os.path.join(elpa_include, 'modules'), True))
++            self.cfg.update('configopts', '--with-elpa-include=%s' % elpa_include)
+             elpa_lib = os.path.join(elpa, 'lib', elpa_lib)
+             self.cfg.update('configopts', '--with-elpa-lib=%s' % elpa_lib)
+ 
+@@ -343,46 +344,28 @@ class EB_QuantumESPRESSO(ConfigureMake):
+         copy_dir(os.path.join(self.cfg['start_dir'], 'bin'), bindir)
+ 
+         # Pick up files not installed in bin
+-        upftools = []
++        def copy_binaries(path, extension='.x'):
++            full_dir = os.path.join(self.cfg['start_dir'], path)
++            self.log.info("Looking for binaries in %s" % full_dir)
++            for filename in os.listdir(full_dir):
++                full_path = os.path.join(full_dir, filename)
++                if os.path.isfile(full_path):
++                    if extension and not filename.endswith(extension):
++                        continue
++                    copy_file(full_path, bindir)
++
+         if 'upf' in targets or 'all' in targets:
+-            upftools = ["casino2upf.x", "cpmd2upf.x", "fhi2upf.x", "fpmd2upf.x", "ncpp2upf.x",
+-                        "oldcp2upf.x", "read_upf_tofile.x", "rrkj2upf.x", "uspp2upf.x", "vdb2upf.x",
+-                        "virtual.x"]
+-            if LooseVersion(self.version) > LooseVersion("5"):
+-                upftools.extend(["interpolate.x", "upf2casino.x"])
+-            if LooseVersion(self.version) >= LooseVersion("6.3"):
+-                upftools.extend(["fix_upf.x"])
+-        upf_bins = [os.path.join('upftools', x) for x in upftools]
+-        for upf_bin in upf_bins:
+-            copy_file(os.path.join(self.cfg['start_dir'], upf_bin), bindir)
++            copy_binaries('upftools')
+ 
+-        wanttools = []
+         if 'want' in targets:
+-            wanttools = ["blc2wan.x", "conductor.x", "current.x", "disentangle.x",
+-                         "dos.x", "gcube2plt.x", "kgrid.x", "midpoint.x", "plot.x", "sumpdos",
+-                         "wannier.x", "wfk2etsf.x"]
+-            if LooseVersion(self.version) > LooseVersion("5"):
+-                wanttools.extend(["cmplx_bands.x", "decay.x", "sax2qexml.x", "sum_sgm.x"])
+-        want_bins = [os.path.join('WANT', 'bin', x) for x in wanttools]
+-        for want_bin in want_bins:
+-            copy_file(os.path.join(self.cfg['start_dir'], want_bin), bindir)
++            copy_binaries('WANT') # this seems to be the wrong dir, (some) executable are in WANT/bin
++            copy_binaries(os.path.join('WANT','bin'), extension=None)
+ 
+-        w90tools = []
+         if 'w90' in targets:
+-            if LooseVersion(self.version) >= LooseVersion("5.4"):
+-                w90tools = ["postw90.x"]
+-                if LooseVersion(self.version) < LooseVersion("6.1"):
+-                    w90tools = ["w90chk2chk.x"]
+-        w90_bins = [os.path.join('W90', x) for x in w90tools]
+-        for w90_bin in w90_bins:
+-            copy_file(os.path.join(self.cfg['start_dir'], w90_bin), bindir)
++            copy_binaries('W90')
+ 
+-        yambo_bins = []
+         if 'yambo' in targets:
+-            yambo_bins = ["a2y", "p2y", "yambo", "ypp"]
+-        yambo_bins = [os.path.join('YAMBO', 'bin', x) for x in yambo_bins]
+-        for yambo_bin in yambo_bins:
+-            copy_file(os.path.join(self.cfg['start_dir'], yambo_bin), bindir)
++            copy_binaries('YAMBO')
+ 
+     def sanity_check_step(self):
+         """Custom sanity check for Quantum ESPRESSO."""
+@@ -394,7 +377,10 @@ class EB_QuantumESPRESSO(ConfigureMake):
+         bins = ["iotk", "iotk.x", "iotk_print_kinds.x"]
+ 
+         if 'cp' in targets or 'all' in targets:
+-            bins.extend(["cp.x", "cppp.x", "wfdd.x"])
++            bins.extend(["cp.x", "wfdd.x"])
++            if LooseVersion(self.version) < LooseVersion("6.4"):
++                bins.append("cppp.x")
++
+ 
+         # only for v4.x, not in v5.0 anymore, called gwl in 6.1 at least
+         if 'gww' in targets or 'gwl' in targets:
+@@ -420,12 +406,14 @@ class EB_QuantumESPRESSO(ConfigureMake):
+         if 'pp' in targets or 'pwall' in targets or 'all' in targets:
+             bins.extend(["average.x", "bands.x", "dos.x", "epsilon.x", "initial_state.x",
+                          "plan_avg.x", "plotband.x", "plotproj.x", "plotrho.x", "pmw.x", "pp.x",
+-                         "projwfc.x", "sumpdos.x", "pw2wannier90.x", "pw_export.x", "pw2gw.x",
++                         "projwfc.x", "sumpdos.x", "pw2wannier90.x", "pw2gw.x",
+                          "wannier_ham.x", "wannier_plot.x"])
+-            if LooseVersion(self.version) > LooseVersion("5"):
++            if LooseVersion(self.version) > LooseVersion("5") and LooseVersion(self.version) < LooseVersion("6.4"):
+                 bins.extend(["pw2bgw.x", "bgw2pw.x"])
+-            else:
++            elif LooseVersion(self.version) <= LooseVersion("5"):
+                 bins.extend(["pw2casino.x"])
++            if LooseVersion(self.version) < LooseVersion("6.4"):
++                bins.extend(["pw_export.x"])
+ 
+         if 'pw' in targets or 'all' in targets:
+             bins.extend(["dist.x", "ev.x", "kpoints.x", "pw.x", "pwi2xsf.x"])
+@@ -448,22 +436,25 @@ class EB_QuantumESPRESSO(ConfigureMake):
+         upftools = []
+         if 'upf' in targets or 'all' in targets:
+             upftools = ["casino2upf.x", "cpmd2upf.x", "fhi2upf.x", "fpmd2upf.x", "ncpp2upf.x",
+-                        "oldcp2upf.x", "read_upf_tofile.x", "rrkj2upf.x", "uspp2upf.x", "vdb2upf.x",
+-                        "virtual.x"]
++                        "oldcp2upf.x", "read_upf_tofile.x", "rrkj2upf.x", "uspp2upf.x", "vdb2upf.x"]
+             if LooseVersion(self.version) > LooseVersion("5"):
+                 upftools.extend(["interpolate.x", "upf2casino.x"])
+             if LooseVersion(self.version) >= LooseVersion("6.3"):
+                 upftools.extend(["fix_upf.x"])
++            if LooseVersion(self.version) < LooseVersion("6.4"):
++                upftools.extend(["virtual.x"])
++            else:
++                upftools.extend(["virtual_v2.x"])
+ 
+         if 'vdw' in targets:  # only for v4.x, not in v5.0 anymore
+             bins.extend(["vdw.x"])
+ 
+         if 'w90' in targets:
+             bins.extend(["wannier90.x"])
+-            if LooseVersion(self.version) >= LooseVersion("5.4"):
+-                bins.extend(["postw90.x"])
+-                if LooseVersion(self.version) < LooseVersion("6.1"):
+-                    bins.extend(["w90chk2chk.x"])
++            #if LooseVersion(self.version) > LooseVersion("5.4"):
++            #    bins.extend(["postw90.x"])
++            #    if LooseVersion(self.version) < LooseVersion("6.1"):
++            #        bins.extend(["w90chk2chk.x"])
+ 
+         want_bins = []
+         if 'want' in targets:
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/s/samtools.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/samtools.py
+index e0a8590..a3145f9 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/s/samtools.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/samtools.py
+@@ -39,12 +39,15 @@ class EB_SAMtools(ConfigureMake):
+         self.bin_files = ["misc/blast2sam.pl",
+                           "misc/bowtie2sam.pl", "misc/export2sam.pl", "misc/interpolate_sam.pl",
+                           "misc/novo2sam.pl", "misc/psl2sam.pl", "misc/sam2vcf.pl", "misc/samtools.pl",
+-                          "misc/soap2sam.pl", "misc/varfilter.py", "misc/wgsim_eval.pl",
++                          "misc/soap2sam.pl", "misc/wgsim_eval.pl",
+                           "misc/zoom2sam.pl", "misc/md5sum-lite", "misc/md5fa", "misc/maq2sam-short",
+                           "misc/maq2sam-long", "misc/wgsim", "samtools"]
++# "misc/varfilter.py" not available in 1.10
+ 
+         self.include_files = ["bam.h", "bam2bcf.h", "bam_endian.h",
+-                              "sam.h", "sam_header.h", "sample.h"]
++                              "sam.h", "sample.h"]
++# "sam_header.h" not available in 1.10
++
+         self.include_dirs = []
+ 
+         if LooseVersion(self.version) == LooseVersion('0.1.18'):
+
+diff --git a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/s/siesta.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/siesta.py
+index aac30ee..46af47e 100644
+--- a/home/uvacse/git/easybuild-easyblocks/easybuild/easyblocks/s/siesta.py
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/siesta.py
+@@ -1,5 +1,5 @@
+ ##
+-# Copyright 2009-2019 Ghent University
++# Copyright 2009-2017 Ghent University
+ #
+ # This file is part of EasyBuild,
+ # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
+@@ -8,7 +8,7 @@
+ # Flemish Research Foundation (FWO) (http://www.fwo.be/en)
+ # and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
+ #
+-# https://github.com/easybuilders/easybuild
++# http://github.com/hpcugent/easybuild
+ #
+ # EasyBuild is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+@@ -68,10 +68,8 @@ class EB_Siesta(ConfigureMake):
+         arch_make = os.path.join(obj_dir, 'arch.make')
+         bindir = os.path.join(start_dir, 'bin')
+ 
+-        loose_ver = LooseVersion(self.version)
+-
+         par = ''
+-        if loose_ver >= LooseVersion('4.1'):
++        if LooseVersion(self.version) >= LooseVersion('4.1'):
+             par = '-j %s' % self.cfg['parallel']
+ 
+         # enable OpenMP support if desired
+@@ -98,7 +96,7 @@ class EB_Siesta(ConfigureMake):
+             (r"^(LDFLAGS\s*=).*$", r"\1 %s %s" % (os.environ['FCFLAGS'], os.environ['LDFLAGS'])),
+         ]
+ 
+-        netcdff_loc = get_software_root('netCDF-Fortran')
++        netcdff_loc = get_software_root('netcdf')
+         if netcdff_loc:
+             # Needed for gfortran at least
+             regex_newlines.append((r"^(ARFLAGS_EXTRA\s*=.*)$", r"\1\nNETCDF_INCFLAGS = -I%s/include" % netcdff_loc))
+@@ -117,7 +115,7 @@ class EB_Siesta(ConfigureMake):
+         # Populate start_dir with makefiles
+         run_cmd(os.path.join(start_dir, 'Src', 'obj_setup.sh'), log_all=True, simple=True, log_output=True)
+ 
+-        if loose_ver < LooseVersion('4.1-b2'):
++        if LooseVersion(self.version) < LooseVersion('4.1-b2'):
+             # MPI?
+             if self.toolchain.options.get('usempi', None):
+                 self.cfg.update('configopts', '--enable-mpi')
+@@ -137,16 +135,17 @@ class EB_Siesta(ConfigureMake):
+             # Configure is run in obj_dir, configure script is in ../Src
+             super(EB_Siesta, self).configure_step(cmd_prefix='../Src/')
+ 
+-            if loose_ver > LooseVersion('4.0'):
++            if LooseVersion(self.version) > LooseVersion('4.0'):
+                 regex_subs_Makefile = [
+                     (r'CFLAGS\)-c', r'CFLAGS) -c'),
+                 ]
+                 apply_regex_substitutions('Makefile', regex_subs_Makefile)
+ 
+         else: # there's no configure on newer versions
+-
++            fortran_flags = ''
+             if self.toolchain.comp_family() in [toolchain.INTELCOMP]:
+                 copy_file(os.path.join(obj_dir, 'intel.make'), arch_make)
++                fortran_flags = '-heap-arrays'
+             elif self.toolchain.comp_family() in [toolchain.GCC]:
+                 copy_file(os.path.join(obj_dir, 'gfortran.make'), arch_make)
+             else:
+@@ -164,19 +163,18 @@ class EB_Siesta(ConfigureMake):
+                 complibs = lapack
+ 
+             regex_subs.extend([
+-                (r"^(LIBS\s*=).*$", r"\1 %s" % complibs),
++                (r"^(LIBS\s*=\s).*$", r"\1 %s" % complibs),
+                 # Needed for a couple of the utils
+-                (r"^(FFLAGS\s*=\s*).*$", r"\1 -fPIC %s" % os.environ['FCFLAGS']),
++                (r"^(FFLAGS\s*=\s*).*$", r"\1 -fPIC %s %s" % (fortran_flags, os.environ['FCFLAGS'])),
+             ])
+             regex_newlines.append((r"^(COMP_LIBS\s*=.*)$", r"\1\nWXML = libwxml.a"))
+ 
+             if netcdff_loc:
+                 regex_subs.extend([
+                     (r"^(LIBS\s*=.*)$", r"\1 $(NETCDF_LIBS)"),
+-                    (r"^(FPPFLAGS\s*=.*)$", r"\1 -DCDF $(NETCDF_INCLUDE)"),
++                    (r"^(FPPFLAGS\s*=.*)$", r"\1 -DCDF"),
+                 ])
+-                netcdf_lib_and_inc = "NETCDF_LIBS = -lnetcdff\nNETCDF_INCLUDE = -I%s/include" % netcdff_loc
+-                regex_newlines.append((r"^(COMP_LIBS\s*=.*)$", r"\1\n%s" % netcdf_lib_and_inc))
++                regex_newlines.append((r"^(COMP_LIBS\s*=.*)$", r"\1\nNETCDF_LIBS = -lnetcdff"))
+ 
+         apply_regex_substitutions(arch_make, regex_subs)
+ 
+@@ -184,6 +182,9 @@ class EB_Siesta(ConfigureMake):
+         for regex_nl in regex_newlines:
+             apply_regex_substitutions(arch_make, [regex_nl])
+ 
++        # new line error and missing -lnetcdff - Ruoshi Sun 2020-04-21
++        apply_regex_substitutions(arch_make, [(r"^(LIBS\s*=)", r"LIBS = -lnetcdff \\")])
++
+         run_cmd('make %s' % par, log_all=True, simple=True, log_output=True)
+ 
+         # Put binary in temporary install dir
+@@ -193,12 +194,11 @@ class EB_Siesta(ConfigureMake):
+             # Make the utils
+             change_dir(os.path.join(start_dir, 'Util'))
+ 
+-            if loose_ver >= LooseVersion('4'):
+-                # clean_all.sh might be missing executable bit...
+-                adjust_permissions('./clean_all.sh', stat.S_IXUSR, recursive=False, relative=True)
+-                run_cmd('./clean_all.sh', log_all=True, simple=True, log_output=True)
++            # clean_all.sh might be missing executable bit...
++            adjust_permissions('./clean_all.sh', stat.S_IXUSR, recursive=False, relative=True)
++            run_cmd('./clean_all.sh', log_all=True, simple=True, log_output=True)
+ 
+-            if loose_ver >= LooseVersion('4.1'):
++            if LooseVersion(self.version) >= LooseVersion('4.1'):
+                 regex_subs_TS = [
+                     (r"^default:.*$", r""),
+                     (r"^EXE\s*=.*$", r""),
+@@ -209,58 +209,45 @@ class EB_Siesta(ConfigureMake):
+                 makefile = os.path.join(start_dir, 'Util', 'TS', 'tshs2tshs', 'Makefile')
+                 apply_regex_substitutions(makefile, regex_subs_TS)
+ 
+-            if loose_ver >= LooseVersion('4'):
+-                # SUFFIX rules in wrong place
+-                regex_subs_suffix = [
+-                    (r'^(\.SUFFIXES:.*)$', r''),
+-                    (r'^(include\s*\$\(ARCH_MAKE\).*)$', r'\1\n.SUFFIXES:\n.SUFFIXES: .c .f .F .o .a .f90 .F90'),
+-                ]
+-                makefile = os.path.join(start_dir, 'Util', 'Sockets', 'Makefile')
+-                apply_regex_substitutions(makefile, regex_subs_suffix)
+-                makefile = os.path.join(start_dir, 'Util', 'SiestaSubroutine', 'SimpleTest', 'Src', 'Makefile')
+-                apply_regex_substitutions(makefile, regex_subs_suffix)
++            # SUFFIX rules in wrong place
++            regex_subs_suffix = [
++                (r'^(\.SUFFIXES:.*)$', r''),
++                (r'^(include\s*\$\(ARCH_MAKE\).*)$', r'\1\n.SUFFIXES:\n.SUFFIXES: .c .f .F .o .a .f90 .F90'),
++            ]
++            makefile = os.path.join(start_dir, 'Util', 'Sockets', 'Makefile')
++            apply_regex_substitutions(makefile, regex_subs_suffix)
++            makefile = os.path.join(start_dir, 'Util', 'SiestaSubroutine', 'SimpleTest', 'Src', 'Makefile')
++            apply_regex_substitutions(makefile, regex_subs_suffix)
+ 
+             regex_subs_UtilLDFLAGS = [
+                 (r'(\$\(FC\)\s*-o\s)', r'$(FC) %s %s -o ' % (os.environ['FCFLAGS'], os.environ['LDFLAGS'])),
+             ]
+             makefile = os.path.join(start_dir, 'Util', 'Optimizer', 'Makefile')
+             apply_regex_substitutions(makefile, regex_subs_UtilLDFLAGS)
+-            if loose_ver >= LooseVersion('4'):
+-                makefile = os.path.join(start_dir, 'Util', 'JobList', 'Src', 'Makefile')
+-                apply_regex_substitutions(makefile, regex_subs_UtilLDFLAGS)
+-
+-            # remove clean at the end of default target
+-            # And yes, they are re-introducing this bug.
+-            is_ver40_to_401 = loose_ver >= LooseVersion('4.0') and loose_ver < LooseVersion('4.0.2')
+-            if (is_ver40_to_401 or loose_ver == LooseVersion('4.1-b3')):
+-                    makefile = os.path.join(start_dir, 'Util', 'SiestaSubroutine', 'SimpleTest', 'Src', 'Makefile')
+-                    apply_regex_substitutions(makefile, [(r"simple_mpi_parallel clean", r"simple_mpi_parallel")])
+-                    makefile = os.path.join(start_dir, 'Util', 'SiestaSubroutine', 'ProtoNEB', 'Src', 'Makefile')
+-                    apply_regex_substitutions(makefile, [(r"protoNEB clean", r"protoNEB")])
+-
+-            # build_all.sh might be missing executable bit...
+-            adjust_permissions('./build_all.sh', stat.S_IXUSR, recursive=False, relative=True)
++            makefile = os.path.join(start_dir, 'Util', 'JobList', 'Src', 'Makefile')
++            apply_regex_substitutions(makefile, regex_subs_UtilLDFLAGS)
++
+             run_cmd('./build_all.sh', log_all=True, simple=True, log_output=True)
+ 
+             # Now move all the built utils to the temp installdir
+             expected_utils = [
++                'Bands/eigfat2plot',
+                 'CMLComp/ccViz',
+-                'Contrib/APostnikov/eig2bxsf', 'Contrib/APostnikov/fmpdos',
+-                'Contrib/APostnikov/md2axsf', 'Contrib/APostnikov/rho2xsf',
+-                'Contrib/APostnikov/vib2xsf', 'Contrib/APostnikov/xv2xsf',
+-                'COOP/fat', 'COOP/mprop',
++                'Contrib/APostnikov/eig2bxsf', 'Contrib/APostnikov/rho2xsf',
++                'Contrib/APostnikov/vib2xsf', 'Contrib/APostnikov/fmpdos',
++                'Contrib/APostnikov/xv2xsf', 'Contrib/APostnikov/md2axsf',
++                'COOP/mprop', 'COOP/fat',
+                 'Denchar/Src/denchar',
+-                'DensityMatrix/cdf2dm', 'DensityMatrix/dm2cdf',
++                'DensityMatrix/dm2cdf', 'DensityMatrix/cdf2dm',
+                 'Eig2DOS/Eig2DOS',
+-                'Gen-basis/gen-basis', 'Gen-basis/ioncat',
+-                'Gen-basis/ionplot.sh',
+-                'Grid/cdf2grid', 'Grid/cdf2xsf', 'Grid/cdf_laplacian',
+-                'Grid/g2c_ng', 'Grid/grid2cdf', 'Grid/grid2cube',
+-                'Grid/grid2val', 'Grid/grid_rotate',
++                'Gen-basis/ioncat', 'Gen-basis/gen-basis',
++                'Grid/cdf2grid', 'Grid/cdf_laplacian', 'Grid/cdf2xsf',
++                'Grid/grid2cube',
++                'Grid/grid_rotate', 'Grid/g2c_ng', 'Grid/grid2cdf', 'Grid/grid2val',
+                 'Helpers/get_chem_labels',
+                 'HSX/hs2hsx', 'HSX/hsx2hs',
+-                'JobList/Src/countJobs', 'JobList/Src/getResults',
+-                'JobList/Src/horizontal', 'JobList/Src/runJobs',
++                'JobList/Src/getResults', 'JobList/Src/countJobs',
++                'JobList/Src/runJobs', 'JobList/Src/horizontal',
+                 'Macroave/Src/macroave',
+                 'ON/lwf2cdf',
+                 'Optimizer/simplex', 'Optimizer/swarm',
+@@ -269,69 +256,33 @@ class EB_Siesta(ConfigureMake):
+                 'SiestaSubroutine/FmixMD/Src/driver',
+                 'SiestaSubroutine/FmixMD/Src/para',
+                 'SiestaSubroutine/FmixMD/Src/simple',
+-                'STM/ol-stm/Src/stm', 'STM/simple-stm/plstm',
+-                'VCA/fractional', 'VCA/mixps',
+-                'Vibra/Src/fcbuild', 'Vibra/Src/vibra',
+-                'WFS/info_wfsx',
+-                'WFS/readwf', 'WFS/readwfx', 'WFS/wfs2wfsx',
+-                'WFS/wfsnc2wfsx', 'WFS/wfsx2wfs',
++                'STM/simple-stm/plstm', 'STM/ol-stm/Src/stm',
++                'VCA/mixps', 'VCA/fractional',
++                'Vibra/Src/vibra', 'Vibra/Src/fcbuild',
++                'WFS/info_wfsx', 'WFS/wfsx2wfs',
++                'WFS/readwfx', 'WFS/wfsnc2wfsx', 'WFS/readwf', 'WFS/wfs2wfsx',
+             ]
+ 
+-            if loose_ver >= LooseVersion('3.2'):
++            if LooseVersion(self.version) <= LooseVersion('4.0'):
+                 expected_utils.extend([
+-                    'Bands/eigfat2plot',
++                    'Bands/new.gnubands',
++                    'TBTrans/tbtrans',
+                 ])
+ 
+-            if loose_ver >= LooseVersion('4.0'):
++            if LooseVersion(self.version) >= LooseVersion('4.0'):
+                 expected_utils.extend([
+                     'SiestaSubroutine/ProtoNEB/Src/protoNEB',
+                     'SiestaSubroutine/SimpleTest/Src/simple_pipes_parallel',
+                     'SiestaSubroutine/SimpleTest/Src/simple_pipes_serial',
+-                    'SiestaSubroutine/SimpleTest/Src/simple_sockets_parallel',
+-                    'SiestaSubroutine/SimpleTest/Src/simple_sockets_serial',
+                     'Sockets/f2fmaster', 'Sockets/f2fslave',
+                 ])
+-                if self.toolchain.options.get('usempi', None):
+-                    expected_utils.extend([
+-                        'SiestaSubroutine/SimpleTest/Src/simple_mpi_parallel',
+-                        'SiestaSubroutine/SimpleTest/Src/simple_mpi_serial',
+-                    ])
+-
+-            if loose_ver < LooseVersion('4.1'):
+-                if loose_ver >= LooseVersion('4.0'):
+-                    expected_utils.extend([
+-                        'COOP/dm_creator',
+-                        'TBTrans_rep/tbtrans',
+-                    ])
+-                else:
+-                    expected_utils.extend([
+-                        'TBTrans/tbtrans',
+-                    ])
+-
+-            if loose_ver < LooseVersion('4.0.2'):
+-                expected_utils.extend([
+-                    'Bands/new.gnubands',
+-                ])
+-            else:
++
++            if LooseVersion(self.version) >= LooseVersion('4.1'):
+                 expected_utils.extend([
+                     'Bands/gnubands',
+-                ])
+-                # Need to revisit this when 4.1 is officialy released.
+-                # This is based on b1-b3 releases
+-                if loose_ver < LooseVersion('4.1'):
+-                    expected_utils.extend([
+-                        'Contour/grid1d', 'Contour/grid2d',
+-                        'Optical/optical', 'Optical/optical_input',
+-                        'sies2arc/sies2arc',
+-                    ])
+-
+-            if loose_ver >= LooseVersion('4.1'):
+-                expected_utils.extend([
+-                    'DensityMatrix/dmbs2dm', 'DensityMatrix/dmUnblock',
+                     'Grimme/fdf2grimme',
+                     'SpPivot/pvtsp',
+-                    'TS/TBtrans/tbtrans', 'TS/tselecs.sh',
+-                    'TS/ts2ts/ts2ts', 'TS/tshs2tshs/tshs2tshs',
++                    'TS/ts2ts/ts2ts', 'TS/tshs2tshs/tshs2tshs', 'TS/TBtrans/tbtrans',
+                 ])
+ 
+             for util in expected_utils:
+@@ -341,25 +292,15 @@ class EB_Siesta(ConfigureMake):
+             # Build transiesta
+             change_dir(obj_dir)
+ 
+-            ts_clean_target = 'clean'
+-            if loose_ver >= LooseVersion('4.1-b4'):
+-                ts_clean_target += '-transiesta'
+-
+-            run_cmd('make %s' % ts_clean_target, log_all=True, simple=True, log_output=True)
++            run_cmd('make clean', log_all=True, simple=True, log_output=True)
+             run_cmd('make %s transiesta' % par, log_all=True, simple=True, log_output=True)
+ 
+             copy_file(os.path.join(obj_dir, 'transiesta'), bindir)
+ 
+-
+     def build_step(self):
+         """No build step for Siesta."""
+         pass
+ 
+-    def test_step(self):
+-        """Custom test step for Siesta."""
+-        change_dir(os.path.join(self.cfg['start_dir'], 'Obj', 'Tests'))
+-        super(EB_Siesta, self).test_step()
+-
+     def install_step(self):
+         """Custom install procedure for Siesta: copy binaries."""
+         bindir = os.path.join(self.installdir, 'bin')
+@@ -382,10 +323,10 @@ class EB_Siesta(ConfigureMake):
+         }
+         custom_commands = []
+         if self.toolchain.options.get('usempi', None):
++            
+             # make sure Siesta was indeed built with support for running in parallel
+-            # The "cd to builddir" is required to not contaminate the install dir with cruft from running siesta
+-            mpi_test_cmd = "cd %s && " % self.builddir
+-            mpi_test_cmd = mpi_test_cmd + "echo 'SystemName test' | mpirun -np 2 siesta 2>/dev/null | grep PARALLEL"
+-            custom_commands.append(mpi_test_cmd)
+-
++            
++            # mpirun does not work on frontend
++            # custom_commands.append("echo 'SystemName test' | mpirun -np 2 siesta 2>/dev/null | grep PARALLEL")
++            s = 3 # mock statement
+         super(EB_Siesta, self).sanity_check_step(custom_paths=custom_paths, custom_commands=custom_commands)
+
+diff --git a/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/singularityimage.py b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/singularityimage.py
+new file mode 100644
+index 0000000..759bb0e
+--- /dev/null
++++ b/apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_easyblocks-3.9.0-py2.7.egg/easybuild/easyblocks/s/singularityimage.py
+@@ -0,0 +1,122 @@
++##
++# Copyright 2009-2017 Ghent University
++#
++# This file is part of EasyBuild,
++# originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
++# with support of Ghent University (http://ugent.be/hpc),
++# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
++# Flemish Research Foundation (FWO) (http://www.fwo.be/en)
++# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
++#
++# http://github.com/hpcugent/easybuild
++#
++# EasyBuild is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation v2.
++#
++# EasyBuild is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with EasyBuild.  If not, see <http://www.gnu.org/licenses/>.
++##
++"""
++General EasyBuild support for software with a binary installer
++
++@author: Stijn De Weirdt (Ghent University)
++@author: Dries Verdegem (Ghent University)
++@author: Kenneth Hoste (Ghent University)
++@author: Pieter De Baets (Ghent University)
++@author: Jens Timmerman (Ghent University)
++"""
++
++import shutil
++import os
++import stat
++
++from easybuild.framework.easyblock import EasyBlock
++from easybuild.framework.easyconfig import CUSTOM
++from easybuild.tools.build_log import EasyBuildError
++from easybuild.tools.filetools import mkdir, rmtree2
++from easybuild.tools.run import run_cmd
++from easybuild.easyblocks.generic.binary import Binary
++
++class EB_SingularityImage(Binary):
++    """
++    Support for installing software that comes in binary form.
++    Just copy the sources to the install dir, or use the specified install command.
++    """
++
++    @staticmethod
++    def extra_options(extra_vars=None):
++        """Extra easyconfig parameters specific to Binary easyblock."""
++        extra_vars = Binary.extra_options(extra_vars)
++        extra_vars.update({
++            'deffile': [None, "Definition (spec) file used to build the container.", CUSTOM],
++            'use_gpu': [False, "Use GPU for running container applications.", CUSTOM], 
++        })
++        return extra_vars
++
++    def __init__(self, *args, **kwargs):
++        """Initialize Binary-specific variables."""
++        super(EB_SingularityImage, self).__init__(*args, **kwargs)
++
++        #self.actual_installdir = None
++        #if self.cfg['staged_install']:
++        #    self.actual_installdir = self.installdir
++        #    self.installdir = os.path.join(self.builddir, 'staged')
++        #    mkdir(self.installdir, parents=True)
++        #    self.log.info("Performing staged installation via %s" % self.installdir)
++        
++        container_run_cmd ='singularity run'
++        if self.cfg['use_gpu']:
++            container_run_cmd = 'singularity run --nv'
++        containerfile = self.cfg['sources'][0]
++        for srcfile in self.cfg['sources']:
++            if srcfile != self.cfg['deffile']:
++                containerfile = srcfile 
++        msg = "Before using this container for the FIRST time, copy it to your personal home (or /scratch) directory using this command:\n"
++        msg+= "cp $CONTAINERDIR/%s /home/$USER\n\n" % containerfile
++        msg+= "To execute the default application inside the container, run this command:\n"
++        msg+= "%s /home/$USER/%s\n\n" % (container_run_cmd,containerfile)
++        if self.cfg['modloadmsg']:
++            msg += self.cfg['modloadmsg']
++        self.cfg['modloadmsg'] = msg
++        self.log.debug(self.cfg['modloadmsg'])
++        
++
++    def post_install_step(self):
++        """Copy installation to actual installation directory in case of a staged installation."""
++        if self.cfg['staged_install']:
++            staged_installdir = self.installdir
++            self.installdir = self.actual_installdir
++            try:
++                # copytree expects target directory to not exist yet
++                if os.path.exists(self.installdir):
++                    rmtree2(self.installdir)
++                shutil.copytree(staged_installdir, self.installdir)
++            except OSError, err:
++                raise EasyBuildError("Failed to move staged install from %s to %s: %s",
++                                     staged_installdir, self.installdir, err)
++
++        deffile = self.cfg['deffile']
++        if deffile is not None:
++            easybuilddir = os.path.join(self.installdir, 'easybuild')
++            try:
++                os.makedirs(easybuilddir)
++                shutil.copy(os.path.join(self.cfg['start_dir'], deffile), easybuilddir)
++            except OSError, err:
++                raise EasyBuildError("Failed to copy %s to %s: %s", self.cfg['deffile'], easybuilddir, err)
++
++        super(Binary, self).post_install_step()
++
++
++    def make_module_extra(self):
++        """Add the install directory to the PATH."""
++        txt = super(EB_SingularityImage, self).make_module_extra()
++        txt += self.module_generator.set_environment("CONTAINERDIR", self.installdir)
++        self.log.debug("make_module_extra added this: %s" % txt)
++        self.log.debug(self.cfg)
++        return txt

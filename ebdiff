@@ -1,0 +1,10 @@
+#!/bin/bash
+# compare easyblocks and framework with official
+# Ruoshi Sun
+# 2021-03-23
+for i in easyblocks framework; do
+    git diff --no-index \
+    /home/uvacse/git/easybuild-$i/easybuild \
+    /apps/software/EasyBuild/3.9.0/lib/python2.7/site-packages/easybuild_${i}-3.9.0-py2.7.egg/easybuild \
+    > ${i}_diff.txt
+done
