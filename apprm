@@ -2,11 +2,14 @@
 # Remove app
 #
 # Ruoshi Sun
+# 2021-03-24 central container dir
 # 2020-02-13
 
 APPDIR="/sfs/applications"
 SOFTWARE="software"
 MODFILE="modulefiles"
+CONTAINERDIR=/share/resources/containers/singularity
+ARCHIVEDIR=/project/arcs/container_archive
 
 function print_usage {
 	echo "Usage: `basename $0` \"YYYYMM list\" CATEGORY [...] SOFTWARE/VERSION"
@@ -158,6 +161,22 @@ for YYYYMM in $YYYYMMs; do
         echo "$MODFILE_PATH does not exist"
     fi
 
+# rm container from $CONTAINERDIR
+    if [ "$1" = "container" ]; then
+        echo
+        ls -A $CONTAINERDIR/${DIR/\//-}.{sif,simg,img} 2> /dev/null
+        read -p "Archive container? [y/N]" yn
+
+        if [[ $yn =~ ^[Yy]$ ]]; then
+            [ -e $SIF ] && mv -i $CONTAINERDIR/${DIR/\//-}.{sif,simg,img} $ARCHIVEDIR
+        else
+            echo "== No changes made in $CONTAINERDIR"
+            exit 0
+        fi
+
+    fi
+
     echo "== Done."
     echo
+
 done
