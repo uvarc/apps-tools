@@ -9,7 +9,7 @@ APPDIR="/sfs/applications"
 SOFTWARE="software"
 MODFILE="modulefiles"
 CONTAINERDIR=/share/resources/containers/singularity
-ARCHIVEDIR=/project/arcs/container_archive
+ARCHIVEDIR=$CONTAINERDIR/archive
 
 function print_usage {
 	echo "Usage: `basename $0` \"YYYYMM list\" CATEGORY [...] SOFTWARE/VERSION"

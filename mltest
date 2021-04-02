@@ -44,6 +44,9 @@ function print_result {
     fi
 }
 
+unset MODULEPATH
+export MODULEPATH=$MODULEPATH_DEFAULT
+
 for i in ${CATEGORY[@]}; do
     if [ "$i" = "vendor" ]; then
         PREFIX=/apps/modulefiles/$i
@@ -58,7 +61,6 @@ for i in ${CATEGORY[@]}; do
     LUAS=($(find $PREFIX -name '*.lua'))
     N=${#LUAS[@]}
     for j in ${LUAS[@]}; do
-        unset MODULEPATH
         ML=()
         LUA=$(basename $j)
         APP=$(echo $j|awk -F'/' '{print $(NF-1)}')
@@ -66,7 +68,6 @@ for i in ${CATEGORY[@]}; do
 
         case "$i" in 
         "core"|"toolchains"|"vendor")
-            export MODULEPATH=$MODULEPATH_DEFAULT
             ;;
         "compiler"|"container"|"mpi")
             n=$((${#PREFIX}+1))
@@ -76,9 +77,20 @@ for i in ${CATEGORY[@]}; do
             COMPILER=${PARENT%%/*}
 
             if [ "$COMPILER" = "gcc-cuda" ]; then
-                export MODULEPATH=/apps/modulefiles/standard/compiler:/apps/modulefiles/standard/mpi:$MODULEPATH_DEFAULT
+                if [ "$i" = "mpi" ]; then
+# e.g. PARENT=gcc-cuda/9.2.0-11.0.228/openmpi/3.1.6
+# module load gcc/9.2.0 cuda/11.0.228 openmpi/3.1.6
+                    read M12 V12 M3 V3 <<< $(echo $PARENT | sed 's/\// /g')
+                    read M1 M2 <<< $(echo ${M12/-/ })
+                    read V1 V2 <<< $(echo ${V12/-/ })
+                    ML+=("$M1/$V1" "$M2/$V2" "$M3/$V3")
+                else
+                    read M12 V12 <<< $(echo ${PARENT/\// })
+                    read M1 M2 <<< $(echo ${M12/-/ })
+                    read V1 V2 <<< $(echo ${V12/-/ })
+                    ML+=("$M1/$V1" "$M2/$V2")
+                fi
             else
-                export MODULEPATH=$MODULEPATH_DEFAULT
                 if [ "$i" = "mpi" ]; then
                     ML+=($(echo $PARENT|awk -F'/' '{printf "%s/%s %s/%s",$1,$2,$3,$4}'))
                 else
@@ -94,21 +106,13 @@ for i in ${CATEGORY[@]}; do
         esac
 
         echo -n "$APP/$VERSION "
+# hidden module
         if [ ${VERSION:0:1} = "." ]; then 
             echo -n "(H) "
         fi
         echo -n "... "
 
-        if [ "$COMPILER" = "gcc-cuda" ]; then
-            if [ "$APP" = "scalapack" ]; then
-                GCCVERSION=$(echo $PARENT|awk -F'/' '{sub(/-.*/,"",$2); print $2}')
-                ML+=("gcc/$GCCVERSION" "openblas" "$PARENT/$APP/$VERSION")
-            else
-                ML+=("$PARENT/$APP/$VERSION")
-            fi
-        else
-            ML+=("$APP/$VERSION")
-        fi
+        ML+=("$APP/$VERSION")
         ml "${ML[@]}"
 
         if [ $? -eq 0 ]; then

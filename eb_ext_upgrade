@@ -1,0 +1,80 @@
+#!/bin/bash
+# upgrade all versions in ext_lists
+# e.g.
+#    ('liac-arff', '2.5.0', { 
+#        'source_urls': ['https://files.pythonhosted.org/packages/source/l/liac-arff'],
+#        'modulename': 'arff',
+#    }),
+# Ruoshi Sun
+# 2021-03-25
+
+function addkey {
+    KEY="$1"
+    VAL="$2"
+    if [ $# -eq 3 ]; then
+        TAB=$3
+        SPACE=$((TAB*4))
+    else
+        SPACE=8
+    fi
+
+    for i in `seq $SPACE`; do
+        echo -n " "
+    done
+    if [[ "$VAL" = "True" || "$VAL" = "False" ]]; then
+        echo "'$KEY': $VAL,"
+    else
+        echo "'$KEY': '$VAL',"
+    fi
+}
+
+PYPI_SOURCE="https://files.pythonhosted.org/packages/source"
+
+IN=$1
+echo "exts_list = ["
+
+NAME=($(sed -n '/exts_list/,$p' $1 | sed -n "s/\s*('\([^']*\)'.*$/\1/gp"))
+
+ml jq
+
+for i in ${NAME[@]}; do
+    JSON=$(curl -s "https://pypi.org/pypi/$i/json")
+    VERSION=$(echo "$JSON" | \
+        jq -r '.releases|keys_unsorted|sort_by(sub("(?<x>[a-z]+)";".\(.x)")|split(".")|map(tonumber? // .))[-1]')
+    NAMELETTER=${i:0:1}
+    cat <<EOF
+    ('$i', '$VERSION', {
+        'source_urls': ['${PYPI_SOURCE}/${NAMELETTER,,}/${i,,}'],
+EOF
+    
+# special cases
+    case "$i" in
+    pip)
+        addkey use_pip False
+        ;;
+    numpy)
+        addkey source_tmpl "%(name)s-%(version)s.zip"
+        ;;
+    Pillow)
+        addkey modulename PIL
+        ;;
+    python-dateutil)
+        addkey modulename dateutil
+        ;;
+    liac-arff)
+        modulename arff
+        ;;
+    pycrypto)
+        modulename Crypto
+        ;;
+    PyNaCl)
+        modulename nacl
+        ;;
+    esac
+
+    cat <<EOF
+    }),
+EOF
+done
+
+echo "]"
