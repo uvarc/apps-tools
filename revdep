@@ -1,6 +1,7 @@
 #!/bin/bash
 # find reverse dependency of module
 # Ruoshi Sun
+# 2021-04-05 all orders, tree
 # 2020-11-24
 
 if [[ $# -eq 0 || $# -gt 2 ]]; then
@@ -8,15 +9,60 @@ if [[ $# -eq 0 || $# -gt 2 ]]; then
     exit 1
 fi
 
+DIR=/apps/modulefiles/standard
+N=$((${#DIR}+2))
+
+function find_revdep {
+    RESULT=$(find $DIR -name '*.lua' -exec grep -l "load(\"$1\")" {} \; | cut -c ${N}- | sed 's/.lua$//')
+    echo "$RESULT"
+}
+
+count=1
+function recursive_find {
+    RESULT="$@"
+    if [ -z "$RESULT" ]; then
+        echo -ne "Processed leaf $count\r"
+        count=$((count+1))
+    else
+        ALLDIRS=$(echo "$RESULT" | sed 's/\//@/g')
+        mkdir $ALLDIRS
+        for i in *; do
+            cd $i
+            SEARCH=$(echo $i | awk -F'@' '{printf "%s/%s", $(NF-1), $NF}')
+            RESULT=$(find_revdep "$SEARCH")
+            recursive_find "$RESULT"
+            cd ..
+        done
+    fi
+}
+
 APP=$1
 if [ $# -eq 2 ]; then
     VERSION=$2
     SEARCH="$APP/$VERSION"
+    HEADER=$SEARCH
 else
     SEARCH="$APP/.*"
+    HEADER=$APP
 fi
 
-DIR=/apps/modulefiles/standard
-N=$((${#DIR}+2))
+RESULT=$(find_revdep $SEARCH)
 
-find $DIR -name '*.lua' -exec grep -l "load(\"$SEARCH\")" {} \; | cut -c ${N}- | sed 's/.lua$//'
+if [ ! -z "$RESULT" ]; then
+    NDEP=$(echo $RESULT|awk '{print NF}')
+    echo "Found $NDEP 1st order reverse dependencies"
+
+    TMPDIR=$(mktemp -d)
+    cd $TMPDIR
+    recursive_find "$RESULT"
+    echo
+    echo
+            
+    ml tree
+    echo $HEADER
+    tree $TMPDIR | sed -e 's/@/\//g' -e '1d' -e '$d'
+
+    rm -rf $TMPDIR
+else
+    echo "No reverse dependencies"
+fi
