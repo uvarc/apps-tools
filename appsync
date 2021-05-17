@@ -155,7 +155,7 @@ fi
 
 echo "== Performing rsync..."
 cd $BUILD_DIR 
-rsync -avR $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
+rsync -avR --delete $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
 rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR
 
 # check default symlink

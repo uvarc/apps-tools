@@ -144,5 +144,25 @@ EOF
 
 cat $EB
 echo
-echo "Run:"
-echo "eb $EB"
+echo "Run: eb $EB"
+
+## CONTAINERDIR set to None in .lua. Don't know why.
+#echo "Inspect the above easyconfig."
+#read -rsn1 -p "Press any key to start EasyBuild installation"
+#echo
+#
+## EasyBuild installation
+#print_stage "EasyBuild"
+#if [ "$EB_FORCE" = true ]; then 
+#    exit_if_error "eb $EB -f" "EasyBuild installation failed"
+#else 
+#    exit_if_error "eb $EB" "EasyBuild installation failed"
+#fi
+#
+#echo
+#echo -n "Done! "
+#if command -v xxd &> /dev/null; then
+#    echo "0000000: f09f 8e89 0a" | xxd -r
+#else
+#    echo
+#fi
