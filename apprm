@@ -2,8 +2,12 @@
 # Remove app
 #
 # Ruoshi Sun
+# 2021-06-17 YYYYMM aliases
 # 2021-03-24 central container dir
 # 2020-02-13
+
+BUILD="udc-ba34-1c0"
+DERPBUILD="udc-ba38-31c9"
 
 APPDIR="/sfs/applications"
 SOFTWARE="software"
@@ -12,15 +16,27 @@ CONTAINERDIR=/share/resources/containers/singularity
 ARCHIVEDIR=$CONTAINERDIR/archive
 
 function print_usage {
-	echo "Usage: `basename $0` \"YYYYMM list\" CATEGORY [...] SOFTWARE/VERSION"
-	echo "       `basename $0` \"YYYYMM list\" core       SOFTWARE/VERSION"
-	echo "       `basename $0` \"YYYYMM list\" toolchains SOFTWARE/VERSION"
-	echo "       `basename $0` \"YYYYMM list\" compiler   COMPILER/VERSION SOFTWARE/VERSION"
-	echo "       `basename $0` \"YYYYMM list\" mpi        COMPILER/VERSION MPI_NAME/VERSION SOFTWARE/VERSION"
-	echo "       `basename $0` \"YYYYMM list\" container  singularity/VERSION SOFTWARE/VERSION"
-	echo
-	echo "Example: `basename $0` 202003 core java/1.12.0"
-	echo "         `basename $0` \"202003_build 202003\" mpi gcc/7.1.0 openmpi/3.1.0 metis/5.1.0"
+	cat <<EOF
+Usage: `basename $0` YYYYMM CATEGORY [...] SOFTWARE/VERSION
+where:
+    YYYYMM = r|b|db|d|prod|dev|all|"<custom list>"
+             r    = rivanna
+             b    = build
+             db   = derp-build
+             d    = derp
+             prod = r + b
+             dev  = db + d
+             all  = r + b + db + d
+    CATEGORY = core|toolchains|compiler|mpi|container
+               core       SOFTWARE/VERSION
+               toolchains SOFTWARE/VERSION
+               compiler   COMPILER/VERSION SOFTWARE/VERSION
+               mpi        COMPILER/VERSION MPI_NAME/VERSION SOFTWARE/VERSION
+               container  singularity/VERSION SOFTWARE/VERSION
+
+Example: `basename $0` all core java/1.8.0
+         `basename $0` \"202003_build 202003\" mpi gcc/7.1.0 openmpi/3.1.0 metis/5.1.0
+EOF
 }
 
 function print_error {
@@ -30,6 +46,14 @@ function print_error {
 	echo
 	print_usage
 	exit 1
+}
+
+function getym {
+    if [ "$(hostname)" = "$1" ]; then
+        echo $(basename $(realpath /apps) | sed 's/_build//')
+    else
+        echo $(basename $(ssh $1 realpath /apps) | sed 's/_build//')
+    fi
 }
 
 function recursive_rmdir {
@@ -54,7 +78,36 @@ if [ ! -e $APPDIR ]; then
 fi
 
 # store list of YYYYMMs
-YYYYMMs=$1
+case $1 in
+b)
+    YYYYMMs="$(getym $BUILD)_build"
+    ;;
+r)
+    YYYYMMs=$(getym $BUILD)
+    ;;
+db)
+    YYYYMMs="$(getym $DERPBUILD)_build"
+    ;;
+d)
+    YYYYMMs=$(getym $DERPBUILD)
+    ;;
+prod)
+    YYYYMM=$(getym $BUILD)
+    YYYYMMs="${YYYYMM}_build $YYYYMM"
+    ;;
+dev)
+    YYYYMM=$(getym $DERPBUILD)
+    YYYYMMs="${YYYYMM}_build $YYYYMM"
+    ;;
+all)
+    YYYYMMp=$(getym $BUILD)
+    YYYYMMd=$(getym $DERPBUILD)
+    YYYYMMs="${YYYYMMp}_build $YYYYMMp ${YYYYMMd}_build $YYYYMMd"
+    ;;
+*)
+    YYYYMMs="$1"
+esac
+
 shift
 
 # loop over YYYYMM
