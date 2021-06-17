@@ -3,7 +3,7 @@
 # Performs rsync from build to production
 # Ruoshi Sun
 
-YYYYMM_default=202106
+YYYYMM_default=$(basename $(realpath /apps) | sed 's/_build//')
 
 if [[ $1 =~ ^[0-9]+ ]]; then
 	YYYYMM=$1
