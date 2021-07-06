@@ -18,13 +18,11 @@ fi
 
 MODULEPATH_DEFAULT=/apps/modulefiles/standard/core:/apps/modulefiles/standard/toolchains:/apps/modulefiles/vendor
 
-# stdout/stderr from module load
-TMP=$(mktemp)
-
 
 function ml {
     module purge
-    module load "$@" &>$TMP
+# stdout/stderr from module load
+    module load "$@" 2>&1
 }
 
 function print_result {
@@ -113,13 +111,13 @@ for i in ${CATEGORY[@]}; do
         echo -n "... "
 
         ML+=("$APP/$VERSION")
-        ml "${ML[@]}"
+        TMP=$(ml "${ML[@]}")
 
         if [ $? -eq 0 ]; then
             echo "PASS"
         else 
             echo "FAIL"
-            cat $TMP
+            echo "$TMP"
 
             case "$i" in
             "core"|"toolchain")
@@ -136,5 +134,3 @@ for i in ${CATEGORY[@]}; do
     print_result $N $Npass "${FAIL[@]}"
     echo
 done
-
-rm $TMP
