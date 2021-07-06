@@ -57,19 +57,18 @@ function tree2md {
 # 2. change to +/-
 # 3. group +/-
 # 4. write
-    TMP=`mktemp`
+    TMP=$(
+        awk -F'/' -v n=$NF '{
+            if (NF==n) print
+        }' $DIR/$TREE12 | \
+        sed -e '/^[^><]/d' \
+            -e 's/^> \.\//\+ /' \
+            -e 's/^< \.\//\- /'
+    )
 
-    awk -F'/' -v n=$NF '{
-        if (NF==n) print
-    }' $DIR/$TREE12 | \
-    sed -e '/^[^><]/d' \
-        -e 's/^> \.\//\+ /' \
-        -e 's/^< \.\//\- /' \
-    > $TMP
-
-    grep "^-" $TMP >$DIR/$LIST
+    grep "^-" <<< "$TMP" >$DIR/$LIST
     echo >>$DIR/$LIST
-    grep "^+" $TMP >>$DIR/$LIST
+    grep "^+" <<< "$TMP" >>$DIR/$LIST
 
 # print markdown
     echo "**${CATEGORY}**"
@@ -77,9 +76,6 @@ function tree2md {
     cat $DIR/$LIST
     echo "\`\`\`"
     echo
-
-# clean up
-    rm $TMP
 }
 
 # core
