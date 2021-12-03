@@ -179,6 +179,9 @@ dependencies = [
     ('cuda', cudaver, '', comp),
 ]
 
+allow_prepend_abs_path = True
+modextrapaths = {'MODULEPATH': '/apps/modulefiles/standard/compiler/gcc-cuda/%s-%s' % (gccver, cudaver)}
+
 moduleclass = 'toolchain'
 EOF
 
@@ -370,6 +373,9 @@ dependencies = [
     ('fftw',      '$FFTW_VER', '', gompic_tc),
     ('cuda',      cudaver, '', comp),
 ]
+
+allow_prepend_abs_path = True
+modextrapaths = {'MODULEPATH': '/apps/modulefiles/standard/mpi/gcc-cuda/%s-%s/openmpi/%s' % (gccver, cudaver, mpiver)}
 
 moduleclass = 'toolchain'
 EOF
