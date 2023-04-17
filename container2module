@@ -141,7 +141,15 @@ sources = ['%(name)s-%(version)s.sif']
 use_gpu = $USE_GPU
 
 skipsteps = ['sanitycheck']
+EOF
 
+if [ "$USE_GPU" = "True" ]; then
+    cat >>$EB <<EOF
+modluafooter = 'add_property("arch","gpu")'
+EOF
+fi
+
+cat >>$EB <<EOF
 moduleclass = '${LABEL[moduleclass]}'
 EOF
 
