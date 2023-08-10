@@ -11,7 +11,7 @@ if [ $# -ne 2 ]; then
 fi
 
 module purge
-ml gcc/7.1.0 tree
+ml tree
 
 STACK1=$1
 STACK2=$2
