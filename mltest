@@ -90,7 +90,11 @@ for i in ${CATEGORY[@]}; do
                 fi
             else
                 if [ "$i" = "mpi" ]; then
-                    ML+=($(echo $PARENT|awk -F'/' '{printf "%s/%s %s/%s",$1,$2,$3,$4}'))
+                    if [ "$COMPILER" = "intel" ]; then
+                        ML+=($(echo $PARENT|awk -F'/' '{printf "intel-compilers/%s %s/%s",$2,$3,$4}'))
+                    else
+                        ML+=($(echo $PARENT|awk -F'/' '{printf "%s/%s %s/%s",$1,$2,$3,$4}'))
+                    fi
                 else
                     ML+=($PARENT)
                 fi
