@@ -3,12 +3,12 @@
 # Performs rsync from build to production
 # Ruoshi Sun
 
-YYYYMM_build=$(basename $(realpath /apps) | sed 's/_build//')
-BUILD_DIR="/sfs/applications/${YYYYMM_build}"
+BUILD_DIR=$(realpath /apps)
+YYYYMM_build=$(basename $BUILD_DIR)
 echo "BUILD_DIR = $BUILD_DIR"
 
-YYYYMM=${YYYYMM_build/_build/}
-PROD_DIR="/sfs/applications/${YYYYMM}"
+PROD_DIR=${BUILD_DIR/_build/}
+YYYYMM=$(basename $PROD_DIR)
 echo "PROD_DIR = $PROD_DIR"
 
 SOFTWARE="software"
@@ -29,7 +29,9 @@ function print_error {
 }
 
 for i in $BUILD_DIR $PROD_DIR; do
-	[ -d $i ] || { print_error "Cannot find directory $i. Please update $0." }
+	if [ ! -d $i ]; then
+        print_error "Cannot find directory $i. Please update $0."
+    fi
 done
 
 NARGS=$#
@@ -40,7 +42,9 @@ fi
 
 if [ $NARGS -eq 1 ]; then
     EB=$1
-    [ -e $EB ] || { print_error "cannot find easyconfig file $1." }
+    if [ ! -e $EB ]; then
+        print_error "cannot find easyconfig file $1."
+    fi
     ml easybuild
 
     read -r PREFIX DIR < <(
@@ -85,7 +89,9 @@ echo
 
 # check paths of software and module file
 for i in $SOFTWARE_PATH $MODFILE_PATH; do
-	[ -e $i ] || { print_error "$i not found." }
+	if [ ! -e $i ]; then
+        print_error "$i not found."
+    fi
 done
 
 # dry rsync
