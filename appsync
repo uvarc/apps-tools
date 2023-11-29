@@ -47,6 +47,7 @@ if [ $NARGS -eq 1 ]; then
     fi
     ml easybuild
 
+    set -e
     set -o pipefail
     read -r PREFIX DIR < <(
         eb -D $1 | grep '[x]' | tail -1 | \
