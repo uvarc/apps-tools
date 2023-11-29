@@ -47,11 +47,15 @@ if [ $NARGS -eq 1 ]; then
     fi
     ml easybuild
 
+    set -o pipefail
     read -r PREFIX DIR < <(
         eb -D $1 | grep '[x]' | tail -1 | \
         sed -e 's/^.*module: //' -e 's/)$//' | \
         awk -F'|' '{print $1,$2}'
     )
+    if [ $? -ne 0 ]; then
+        print_error "possible error in module installation."
+    fi
     PREFIX="standard/$PREFIX"
 # add '.' for hidden modulefile
     if grep -q "^hidden\s*=\s*True" $EB; then
