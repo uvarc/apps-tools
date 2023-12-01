@@ -1,7 +1,12 @@
 #!/bin/bash
-# test module load for the entire apps stack
+# test module load in parallel for the entire apps stack
 # Ruoshi Sun
-# 2020-11-17
+# 2023-12-01
+
+ml parallel || {
+    echo "Error: cannot load parallel module"
+    exit 1
+}
 
 if [ $# -ne 1 ]; then
     echo "Usage: `basename $0` CATEGORY"
@@ -16,34 +21,62 @@ else
     CATEGORY=$1
 fi
 
+PROC=$(nproc --all)
 MODULEPATH_DEFAULT=/apps/modulefiles/standard/core:/apps/modulefiles/standard/toolchains:/apps/modulefiles/vendor
-
-
-function ml {
-    module purge
-# stdout/stderr from module load
-    module load "$@" 2>&1
-}
-
-function print_result {
-    N=$1
-    Npass=$2
-    shift 2
-    FAIL=("$@")
-    Nfail=${#FAIL[@]} 
-
-    echo "--------"
-    echo "PASS: $Npass/$N"
-    echo "FAIL: $Nfail/$N"
-    if [ $Nfail -gt 0 ]; then
-        for i in "${FAIL[@]}"; do
-            echo "  $i"
-        done
-    fi
-}
 
 unset MODULEPATH
 export MODULEPATH=$MODULEPATH_DEFAULT
+
+function getmodule {
+    if [ "$i" = "vendor" ]; then
+        PREFIX=/apps/modulefiles/$i
+    else
+        PREFIX=/apps/modulefiles/standard/$i
+    fi
+    LUA=$(basename $1)
+    i=$2 # category
+    ML=()
+    APP=$(echo $1|awk -F'/' '{print $(NF-1)}')
+    VERSION=${LUA/.lua/}
+
+    case "$i" in 
+    "core"|"toolchains"|"vendor")
+        ;;
+    "compiler"|"container"|"mpi")
+        n=$((${#PREFIX}+${#i}+1))
+        PARENT=$(dirname $1)
+        PARENT=${PARENT:$n}
+        PARENT=${PARENT%/*}
+        COMPILER=${PARENT%%/*}
+
+# replace / with ' ' every other occurrence
+# replace intel/2* with intel-compilers/2*; intel/18 as is
+        ML+=($(echo $PARENT|sed '-es#/# #'{10..1..2}|sed 's#^intel/2#intel-compilers/2#'))
+        echo -n "$PARENT/"
+        ;;
+    *)
+        echo "Unknown category"
+        exit 1
+        ;;
+    esac
+
+    echo -n "$APP/$VERSION "
+# hidden module
+    if [ ${VERSION:0:1} = "." ]; then 
+        echo -n "(H) "
+    fi
+    echo -n "... "
+
+    ML+=("$APP/$VERSION")
+    module purge
+    MLMSG=$(mktemp)
+    ml "${ML[@]}" 2>$MLMSG && echo "PASS" || {
+        echo -e "\033[1;31mFAIL\033[0m"
+        cat $MLMSG
+    }
+    rm $MLMSG
+}
+export -f getmodule
 
 for i in ${CATEGORY[@]}; do
     if [ "$i" = "vendor" ]; then
@@ -52,89 +85,10 @@ for i in ${CATEGORY[@]}; do
         PREFIX=/apps/modulefiles/standard/$i
     fi
 
-# list of modules that failed to load
-    FAIL=()
-
     echo "[$PREFIX]"
-    LUAS=($(find $PREFIX -name '*.lua'))
+    LUAS=( $(find $PREFIX/ -name '*.lua') )
     N=${#LUAS[@]}
-    for j in ${LUAS[@]}; do
-        ML=()
-        LUA=$(basename $j)
-        APP=$(echo $j|awk -F'/' '{print $(NF-1)}')
-        VERSION=${LUA/.lua/}
-
-        case "$i" in 
-        "core"|"toolchains"|"vendor")
-            ;;
-        "compiler"|"container"|"mpi")
-            n=$((${#PREFIX}+1))
-            PARENT=$(dirname $j)
-            PARENT=${PARENT:$n}
-            PARENT=${PARENT%/*}
-            COMPILER=${PARENT%%/*}
-
-            if [ "$COMPILER" = "gcc-cuda" ]; then
-                if [ "$i" = "mpi" ]; then
-# e.g. PARENT=gcc-cuda/9.2.0-11.0.228/openmpi/3.1.6
-# module load gcc/9.2.0 cuda/11.0.228 openmpi/3.1.6
-                    read M12 V12 M3 V3 <<< $(echo $PARENT | sed 's/\// /g')
-                    read M1 M2 <<< $(echo ${M12/-/ })
-                    read V1 V2 <<< $(echo ${V12/-/ })
-                    ML+=("$M1/$V1" "$M2/$V2" "$M3/$V3")
-                else
-                    read M12 V12 <<< $(echo ${PARENT/\// })
-                    read M1 M2 <<< $(echo ${M12/-/ })
-                    read V1 V2 <<< $(echo ${V12/-/ })
-                    ML+=("$M1/$V1" "$M2/$V2")
-                fi
-            else
-                if [ "$i" = "mpi" ]; then
-                    if [ "$COMPILER" = "intel" ]; then
-                        ML+=($(echo $PARENT|awk -F'/' '{printf "intel-compilers/%s %s/%s",$2,$3,$4}'))
-                    else
-                        ML+=($(echo $PARENT|awk -F'/' '{printf "%s/%s %s/%s",$1,$2,$3,$4}'))
-                    fi
-                else
-                    ML+=($PARENT)
-                fi
-            fi
-            echo -n "$PARENT/"
-            ;;
-        *)
-            echo "Unknown category"
-            exit 1
-            ;;
-        esac
-
-        echo -n "$APP/$VERSION "
-# hidden module
-        if [ ${VERSION:0:1} = "." ]; then 
-            echo -n "(H) "
-        fi
-        echo -n "... "
-
-        ML+=("$APP/$VERSION")
-        TMP=$(ml "${ML[@]}")
-
-        if [ $? -eq 0 ]; then
-            echo "PASS"
-        else 
-            echo "FAIL"
-            echo "$TMP"
-
-            case "$i" in
-            "core"|"toolchain")
-                FAIL+=("$APP/$VERSION")
-                ;;
-            *)
-                FAIL+=("$PARENT/$APP/$VERSION")
-                ;;
-            esac
-        fi
-    done
-
-    Npass=$(($N-${#FAIL[@]}))
-    print_result $N $Npass "${FAIL[@]}"
+    echo $N
+    parallel -j$PROC getmodule ::: ${LUAS[@]} ::: $i
     echo
 done
