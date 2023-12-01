@@ -28,13 +28,14 @@ unset MODULEPATH
 export MODULEPATH=$MODULEPATH_DEFAULT
 
 function getmodule {
+    LUA=$(basename $1)
+    i=$2 # category
+
     if [ "$i" = "vendor" ]; then
         PREFIX=/apps/modulefiles/$i
     else
         PREFIX=/apps/modulefiles/standard/$i
     fi
-    LUA=$(basename $1)
-    i=$2 # category
     ML=()
     APP=$(echo $1|awk -F'/' '{print $(NF-1)}')
     VERSION=${LUA/.lua/}
