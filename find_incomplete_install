@@ -21,24 +21,8 @@ function search_eb {
     incomplete=()
 
     cd $APPDIR/$YYYYMM/software/standard/$CATEGORY
-    APPS=`find -maxdepth $DEPTH -mindepth $DEPTH -type d`
-# total number of apps in category
-    N=`wc -w <<< $APPS`
-
-    for i in $APPS; do
-        if [ ! -e $i/easybuild/*.eb -o ! -e $i/easybuild/reprod/*.eb ]; then
-            incomplete+=( "$i" )
-        fi
-    done
-
-# number of incomplete installations
-    n=${#incomplete[@]}
-
-# print results
-    echo "$CATEGORY (${n}/${N})"
-    if [ $n -gt 0 ]; then
-        printf '    %s\n' "${incomplete[@]}"
-    fi
+    echo "$CATEGORY:"
+    find -maxdepth $DEPTH -mindepth $DEPTH -type d '!' -exec sh -c 'ls -1 "{}"/easybuild 2>/dev/null|egrep -iq "^*\.eb$"' ';' -print
 }
 
 for YYYYMM in $YYYYMMs; do
