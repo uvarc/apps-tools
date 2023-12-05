@@ -44,7 +44,7 @@ function getmodule {
     "core"|"toolchains"|"vendor")
         ;;
     "compiler"|"container"|"mpi")
-        n=$((${#PREFIX}+${#i}+1))
+        n=$((${#PREFIX}+1))
         PARENT=$(dirname $1)
         PARENT=${PARENT:$n}
         PARENT=${PARENT%/*}
@@ -52,7 +52,7 @@ function getmodule {
 
 # replace / with ' ' every other occurrence
 # replace intel/2* with intel-compilers/2*; intel/18 as is
-        ML+=($(echo $PARENT|sed '-es#/# #'{10..1..2}|sed 's#^intel/2#intel-compilers/2#'))
+        ML+=($(echo $PARENT|sed '-es#/# #'{8..1..2}|sed 's#^intel/2#intel-compilers/2#'))
         echo -n "$PARENT/"
         ;;
     *)
