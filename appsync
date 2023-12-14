@@ -49,9 +49,10 @@ if [ $NARGS -eq 1 ]; then
 
     set -e
     set -o pipefail
-    EBOUT=$(eb -D $1)
+    EBOUT=$(mktemp)
+    eb -D $1 &> $EBOUT
     read -r PREFIX DIR < <(
-        echo "$EBOUT" | grep '[x]' | tail -1 | \
+        grep '[x]' $EBOUT | tail -1 | \
         sed -e 's/^.*module: //' -e 's/)$//' | \
         awk -F'|' '{print $1,$2}'
     )
