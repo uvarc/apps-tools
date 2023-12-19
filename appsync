@@ -60,6 +60,7 @@ if [ $NARGS -eq 1 ]; then
         print_error "possible error in module installation."
     fi
     PREFIX="standard/$PREFIX"
+    DIR="${DIR/\/./\/}"
 # add '.' for hidden modulefile
     if grep -q "^hidden\s*=\s*True" $EB; then
         LUA="${DIR/\///.}.lua"
