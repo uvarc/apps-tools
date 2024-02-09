@@ -6,12 +6,12 @@
 # 2021-03-24 central container dir
 # 2020-02-13
 
-BUILD="udc-ba34-1c0"
-DERPBUILD="udc-ba38-31c9"
+BUILD=build
+DERPBUILD=derp-build
 
-APPDIR="/sfs/applications"
-SOFTWARE="software"
-MODFILE="modulefiles"
+APPDIR=/sfs/applications
+SOFTWARE=software
+MODFILE=modulefiles
 CONTAINERDIR=/share/resources/containers/singularity
 ARCHIVEDIR=$CONTAINERDIR/archive
 
