@@ -53,7 +53,7 @@ if [ $NARGS -eq 2 ]; then
         echo "$MODFILE_PATH"
         echo "$MODFILE_DEST"
         echo
-        rsync -nav $SOFTWARE_PATH $SOFTWARE_DEST
+        rsync -nav $SOFTWARE_PATH $(dirname $SOFTWARE_DEST)
         rsync -nav $MODFILE_PATH $MODFILE_DEST
         echo "== Done."
         exit 0
