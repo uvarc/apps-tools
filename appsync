@@ -29,6 +29,9 @@ if [ $NARGS -eq 0 ]; then
 	exit 0
 fi
 
+SOFTWARE="software"
+MODFILE="modulefiles"
+
 # Need to use realpath for vendor source and destination 
 # Do not use /apps or it will overwrite the vendor symlink
 if [ $NARGS -eq 2 ]; then
@@ -36,8 +39,22 @@ if [ $NARGS -eq 2 ]; then
     vendor)
         SOURCE=/sfs/applications/$1/installation
         DEST=/sfs/applications/$1/production
-        rsync -nav $SOURCE/$2 $DEST/$2
-        rsync -nav $SOURCE/$2.lua $DEST/$2.lua
+        SOFTWARE_PATH=$SOURCE/$SOFTWARE/$2 
+        SOFTWARE_DEST=$DEST/$SOFTWARE/$2
+        MODFILE_PATH=$SOURCE/$MODFILE/$2.lua
+        MODFILE_DEST=$DEST/$MODFILE/$2.lua
+
+        echo "== Paths"
+        echo "Software source and destination:"
+        echo "$SOFTWARE_PATH"
+        echo "$SOFTWARE_DEST"
+        echo 
+        echo "Module file source and destination:"
+        echo "$MODFILE_PATH"
+        echo "$MODFILE_DEST"
+        echo
+        rsync -nav $SOFTWARE_PATH $SOFTWARE_DEST
+        rsync -nav $MODFILE_PATH $MODFILE_DEST
         echo "== Done."
         exit 0
         ;;
@@ -80,9 +97,6 @@ echo "BUILD_DIR = $BUILD_DIR"
 PROD_DIR=${BUILD_DIR/_build/}
 YYYYMM=$(basename $PROD_DIR)
 echo "PROD_DIR = $PROD_DIR"
-
-SOFTWARE="software"
-MODFILE="modulefiles"
 
 SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
 MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
