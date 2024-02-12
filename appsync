@@ -3,17 +3,6 @@
 # Performs rsync from build to production
 # Ruoshi Sun
 
-BUILD_DIR=$(realpath /apps)
-YYYYMM_build=$(basename $BUILD_DIR)
-echo "BUILD_DIR = $BUILD_DIR"
-
-PROD_DIR=${BUILD_DIR/_build/}
-YYYYMM=$(basename $PROD_DIR)
-echo "PROD_DIR = $PROD_DIR"
-
-SOFTWARE="software"
-MODFILE="modulefiles"
-
 function print_usage {
 	echo "Usage: `basename $0` EASYCONFIG"
 	echo "Usage: `basename $0` vendor APP/VERSION"
@@ -40,45 +29,60 @@ if [ $NARGS -eq 0 ]; then
 	exit 0
 fi
 
-if [ $NARGS -eq 1 ]; then
-    EB=$1
-    if [ ! -e $EB ]; then
-        print_error "cannot find easyconfig file $1."
-    fi
-    ml easybuild
-
-    set -e
-    set -o pipefail
-    read -r PREFIX DIR < <(
-        eb -D $1 | grep '\[x\]' | tail -1 | \
-        sed -e 's/^.*module: //' -e 's/)$//' | \
-        awk -F'|' '{print $1,$2}'
-    )
-    if [ $? -ne 0 ]; then
-        print_error "possible error in module installation."
-    fi
-    PREFIX="standard/$PREFIX"
-    DIR="${DIR/\/./\/}"
-# add '.' for hidden modulefile
-    if grep -q "^hidden\s*=\s*True" $EB; then
-        LUA="${DIR/\///.}.lua"
-    else
-        LUA="$DIR.lua"
-    fi
-else
+# Need to use realpath for vendor source and destination 
+# Do not use /apps or it will overwrite the vendor symlink
+if [ $NARGS -eq 2 ]; then
     case $1 in
     vendor)
-        if [ $NARGS -ne 2 ]; then
-            print_error "missing arguments."
-        fi
-        PREFIX="$1"
-        DIR=$2
+        SOURCE=/sfs/applications/$1/installation
+        DEST=/sfs/applications/$1/production
+        rsync -nav $SOURCE/$2 $DEST/$2
+        rsync -nav $SOURCE/$2.lua $DEST/$2.lua
+        echo "== Done."
+        exit 0
         ;;
     *)
         print_error "invalid category $1."
         ;;
     esac
 fi
+
+# standard module
+EB=$1
+if [ ! -e $EB ]; then
+    print_error "cannot find easyconfig file $1."
+fi
+ml easybuild
+
+set -e
+set -o pipefail
+read -r PREFIX DIR < <(
+    eb -D $1 | grep '\[x\]' | tail -1 | \
+    sed -e 's/^.*module: //' -e 's/)$//' | \
+    awk -F'|' '{print $1,$2}'
+)
+if [ $? -ne 0 ]; then
+    print_error "possible error in module installation."
+fi
+PREFIX="standard/$PREFIX"
+DIR="${DIR/\/./\/}"
+# add '.' for hidden modulefile
+if grep -q "^hidden\s*=\s*True" $EB; then
+    LUA="${DIR/\///.}.lua"
+else
+    LUA="$DIR.lua"
+fi
+
+BUILD_DIR=$(realpath /apps)
+YYYYMM_build=$(basename $BUILD_DIR)
+echo "BUILD_DIR = $BUILD_DIR"
+
+PROD_DIR=${BUILD_DIR/_build/}
+YYYYMM=$(basename $PROD_DIR)
+echo "PROD_DIR = $PROD_DIR"
+
+SOFTWARE="software"
+MODFILE="modulefiles"
 
 SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
 MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
@@ -100,21 +104,6 @@ for i in $SOFTWARE_PATH $MODFILE_PATH; do
     fi
 done
 
-# dry rsync
-# note: rsync -R uses relative paths
-#read -p "== Press enter to perform rsync dry run: " dryrun
-#if [ ! -z $dryrun ]; then
-#	#echo "Exiting..."
-#	#exit 0
-#fi
-#
-#echo "== Performing rsync dry run..."
-#
-#cd $BUILD_DIR 
-#rsync -navR $SOFTWARE/$PREFIX/$DIR    $PROD_DIR && \
-#rsync -navR $MODFILE/$PREFIX/$LUA $PROD_DIR
-
-# real rsync
 echo
 read -p "== Perform rsync now? [y/N]" realrun
 
