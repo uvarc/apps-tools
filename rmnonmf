@@ -1,0 +1,15 @@
+#!/bin/bash
+# Remove non-modulefiles
+find /apps/modulefiles -type f ! \( -name '*.lua' -o -name 'default' \)
+echo
+read -p "== Remove? [y/N]" yn
+
+if [[ ! $yn =~ ^[Yy]$ ]]; then
+    echo "== No changes performed."
+    exit 0
+fi
+
+echo "== Removing..."
+find /apps/modulefiles -type f ! \( -name '*.lua' -o -name 'default' \) -exec rm {} \;
+
+echo "== Done."

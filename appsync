@@ -53,8 +53,15 @@ if [ $NARGS -eq 2 ]; then
         echo "$MODFILE_PATH"
         echo "$MODFILE_DEST"
         echo
-        rsync -nav $SOFTWARE_PATH $(dirname $SOFTWARE_DEST)
-        rsync -nav $MODFILE_PATH $MODFILE_DEST
+        read -p "== Perform rsync now? [y/N]" realrun
+
+        if [[ ! $realrun =~ ^[Yy]$ ]]; then
+            echo "== No changes performed."
+            exit 0
+        fi
+        echo
+        rsync -av $SOFTWARE_PATH $(dirname $SOFTWARE_DEST)
+        rsync -av $MODFILE_PATH $MODFILE_DEST
         echo "== Done."
         exit 0
         ;;
