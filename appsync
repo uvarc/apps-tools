@@ -101,7 +101,11 @@ BUILD_DIR=$(realpath /apps)
 YYYYMM_build=$(basename $BUILD_DIR)
 echo "BUILD_DIR = $BUILD_DIR"
 
-PROD_DIR=${BUILD_DIR/_build/}
+if [ "$YYYYMM_build" = "202412_build" ]; then
+    PROD_DIR=${BUILD_DIR/_build/}
+else
+    PROD_DIR=$(echo $BUILD_DIR | sed -e 's@weka@gpfs/tardis@' -e 's/_build//')
+fi
 YYYYMM=$(basename $PROD_DIR)
 echo "PROD_DIR = $PROD_DIR"
 

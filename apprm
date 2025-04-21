@@ -9,7 +9,6 @@
 BUILD=build
 DERPBUILD=derp-build
 
-APPDIR=/sfs/applications
 SOFTWARE=software
 MODFILE=modulefiles
 CONTAINERDIR=/share/resources/containers/singularity
@@ -74,10 +73,6 @@ if [ $NARGS -lt 3 ]; then
 	exit 0
 fi
 
-if [ ! -e $APPDIR ]; then
-    print_error "$APPDIR not found. Please update $0."
-fi
-
 # store list of YYYYMMs
 case $1 in
 b)
@@ -114,6 +109,15 @@ shift
 # loop over YYYYMM
 for YYYYMM in $YYYYMMs; do
     echo "[$YYYYMM]"
+
+    if [[ $YYYYMM == *"_build" ]]; then
+        APPDIR=/sfs/weka/applications
+    else
+        APPDIR=/sfs/gpfs/tardis/applications
+    fi
+    if [ ! -e $APPDIR ]; then
+        print_error "$APPDIR not found. Please update $0."
+    fi
 
 # parse args
     case $1 in
