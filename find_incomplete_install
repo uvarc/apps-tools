@@ -6,8 +6,6 @@
 # Ruoshi Sun
 # 2020-02-18
 
-APPDIR=/sfs/applications
-
 if [ $# -eq 0 ]; then
     echo "Usage: `basename $0` YYYYMM [...]"
     exit 1
@@ -27,6 +25,16 @@ function search_eb {
 
 for YYYYMM in $YYYYMMs; do
     echo "[$YYYYMM]"
+
+    if [[ $YYYYMM == "202412"* ]]; then
+        APPDIR=/sfs/applications
+    else
+        if [[ $YYYYMM == *"_build" ]]; then
+            APPDIR=/sfs/weka/applications
+        else
+            APPDIR=/sfs/gpfs/tardis/applications
+        fi
+    fi
 
     search_eb core       2
     search_eb compiler   4
