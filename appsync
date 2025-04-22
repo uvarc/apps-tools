@@ -113,7 +113,10 @@ echo "PROD_DIR = $PROD_DIR"
 
 SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
 MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
-EB_PATH=$BUILD_DIR/ebscripts/easybuild/easyconfigs/$APP/$EB
+
+# may contain uppercase
+APP_EB = $(echo $EB|awk '/^name/ {gsub(/\047/,""); print $3})'
+EB_PATH=$BUILD_DIR/ebscripts/easybuild/easyconfigs/$APP_EB/$EB
 
 echo "== Paths"
 echo "Software source and destination:"
@@ -126,7 +129,7 @@ echo "$PROD_DIR/$MODFILE/$PREFIX/`dirname $DIR`"
 echo
 echo "Easyconfig source and destination:"
 echo "$EB_PATH"
-echo "$PROD_DIR/ebscripts/easybuild/easyconfigs/$APP/"
+echo "$PROD_DIR/ebscripts/easybuild/easyconfigs/$APP_EB/"
 echo
 
 # check paths of software and module file
@@ -148,7 +151,7 @@ echo "== Performing rsync..."
 cd $BUILD_DIR 
 rsync -avR --delete $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
 rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR && \
-rsync -avR ebscripts/easybuild/easyconfigs/$APP/$EB $PROD_DIR
+rsync -avR ebscripts/easybuild/easyconfigs/$APP_EB/$EB $PROD_DIR
 
 # check default symlink
 if [ -e $MODFILE/$PREFIX/$APP/default ]; then
