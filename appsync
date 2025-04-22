@@ -115,7 +115,7 @@ SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
 MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
 
 # may contain uppercase
-APP_EB = $(echo $EB|awk '/^name/ {gsub(/\047/,""); print $3})'
+APP_EB = $(echo $EB|awk '/^name/ {gsub(/\047/,""); print $3}')
 EB_PATH=$BUILD_DIR/ebscripts/easybuild/easyconfigs/$APP_EB/$EB
 
 echo "== Paths"
