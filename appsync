@@ -97,6 +97,8 @@ else
     LUA="$DIR.lua"
 fi
 
+APP=`dirname $DIR`
+
 BUILD_DIR=$(realpath /apps)
 YYYYMM_build=$(basename $BUILD_DIR)
 echo "BUILD_DIR = $BUILD_DIR"
@@ -111,6 +113,7 @@ echo "PROD_DIR = $PROD_DIR"
 
 SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
 MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
+EB_PATH=$BUILD_DIR/ebscripts/easybuild/easyconfigs/$APP/$EB
 
 echo "== Paths"
 echo "Software source and destination:"
@@ -120,6 +123,10 @@ echo
 echo "Module file source and destination:"
 echo "$MODFILE_PATH"
 echo "$PROD_DIR/$MODFILE/$PREFIX/`dirname $DIR`"
+echo
+echo "Easyconfig source and destination:"
+echo "$EB_PATH"
+echo "$PROD_DIR/ebscripts/easybuild/easyconfigs/$APP/"
 echo
 
 # check paths of software and module file
@@ -140,10 +147,10 @@ fi
 echo "== Performing rsync..."
 cd $BUILD_DIR 
 rsync -avR --delete $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
-rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR
+rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR && \
+rsync -avR ebscripts/easybuild/easyconfigs/$APP/$EB $PROD_DIR
 
 # check default symlink
-APP=`dirname $DIR`
 if [ -e $MODFILE/$PREFIX/$APP/default ]; then
     rsync -avR $MODFILE/$PREFIX/$APP/default $PROD_DIR
 fi
