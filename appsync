@@ -23,6 +23,11 @@ if [ $NARGS -eq 0 ]; then
 	exit 0
 fi
 
+# directory name for software and modules
+SOFTWARE="software"
+MODFILE="modulefiles"
+
+# determine source and destination for /apps
 APP_SOURCE=$(realpath /apps)
 if [ "$(basename $APP_SOURCE)" = "202412_build" ]; then
     APP_DEST=${APP_SOURCE/_build/}
@@ -37,23 +42,17 @@ fi
 
 for i in $APP_SOURCE $APP_DEST; do
     if [ ! -d $i ]; then
-        print_error "Cannot find directory $i. Please update $0."
+        print_error "Cannot find directory $i."
     fi
 done
 
-echo "APP_SOURCE = $APP_SOURCE
-APP_DEST = $APP_DEST"
-
-SOFTWARE="software"
-MODFILE="modulefiles"
-
-# Need to use realpath for vendor source and destination 
-# Do not use /apps or it will overwrite the vendor symlink
 if [ $NARGS -eq 2 ]; then
+    # Need to use realpath for vendor source and destination 
+    # Do not use /apps or it will overwrite the vendor symlink
     case $1 in
     vendor)
-        APP_SOURCE=$APP_SOURCE/$1/installation
-        APP_DEST=$APP_DEST/$1/production
+        APP_SOURCE=$(dirname $APP_SOURCE)/$1/installation
+        APP_DEST=$(dirname $APP_DEST)/$1/production
         SOFTWARE_PATH=$SOFTWARE/$2 
         MODFILE_PATH=$MODFILE/$2.lua
         ;;
@@ -61,19 +60,25 @@ if [ $NARGS -eq 2 ]; then
         print_error "invalid category $1."
         ;;
     esac
-elif [ $NARGS -eq 1 ]; then
+fi
+
+echo "Source      = $APP_SOURCE"
+echo "Destination = $APP_DEST"
+echo
+
+# needed to rsync relative path names
+# also ensures that easyconfig is read from $CFGS instead of $PWD
+cd $APP_SOURCE 
+
 # standard module via easyconfig
-    EB=$1
-    if [ ! -e $EB ]; then
-        print_error "cannot find easyconfig file $1."
-    fi
+if [ $NARGS -eq 1 ]; then
     ml easybuild
 
     CFGS=$EASYBUILD_REPOSITORYPATH
     set -e
     set -o pipefail
     read -r EB_PATH PREFIX DIR < <(
-        eb -D $1 | awk '/\[x\]/ {gsub(/\)$/,""); print $3, $(NF-2), $NF}' | tail -1
+        eb -D $1 2>/dev/null | awk '/\[x\]/ {gsub(/\)$/,""); print $3, $(NF-2), $NF}' | tail -1
     )
     if [ $? -ne 0 ]; then
         print_error "possible error in module installation."
@@ -96,22 +101,19 @@ elif [ $NARGS -eq 1 ]; then
     # e.g. OpenMPI-5.0.7-NVHPC-25.3.eb:
     #    CFGS = /apps/ebscripts/easybuild/easyconfigs
     # EB_PATH = $CFGS/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
-    #           xxxxxx--->
+    #           xxxxxx->
     EB_PATH=${EB_PATH:6}
 fi
 
 echo "== Paths
   Software: $SOFTWARE_PATH
-Modulefile: $MODFILE_PATH
-"
+Modulefile: $MODFILE_PATH"
 if [ $NARGS -eq 1 ]; then
     echo "Easyconfig: $EB_PATH"
 fi
 echo
 
 # check paths
-cd $APP_SOURCE 
-
 read -p "== Perform rsync now? [y/N]" realrun
 
 if [[ ! $realrun =~ ^[Yy]$ ]]; then
