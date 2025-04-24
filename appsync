@@ -24,8 +24,12 @@ if [ $NARGS -eq 0 ]; then
 fi
 
 # directory name for software and modules
-SOFTWARE="software"
-MODFILE="modulefiles"
+ml easybuild
+read -r CFGS MODFILE SOFTWARE < <(
+    eb --show-config|awk '/^repository/ {print $4} /^subdir-modules/ {print $4} /^subdir-software/ {print $4}'|tr '\n' ' '
+)
+MODFILE=$(echo $MODFILE|sed 's@/.*$@@')
+SOFTWARE=$(echo $SOFTWARE|sed 's@/.*$@@')
 
 # determine source and destination for /apps
 APP_SOURCE=$(realpath /apps)
@@ -72,9 +76,6 @@ cd $APP_SOURCE
 
 # standard module via easyconfig
 if [ $NARGS -eq 1 ]; then
-    ml easybuild
-
-    CFGS=$EASYBUILD_REPOSITORYPATH
     set -e
     set -o pipefail
     read -r EB_PATH PREFIX DIR < <(
