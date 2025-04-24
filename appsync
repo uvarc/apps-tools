@@ -5,7 +5,7 @@
 
 function print_usage {
 	echo "Usage: `basename $0` EASYCONFIG"
-	echo "Usage: `basename $0` vendor APP/VERSION"
+	echo "Usage: `basename $0` vendor NAME/VERSION"
 }
 
 function print_error {
@@ -17,17 +17,32 @@ function print_error {
 	exit 1
 }
 
-for i in $BUILD_DIR $PROD_DIR; do
-	if [ ! -d $i ]; then
-        print_error "Cannot find directory $i. Please update $0."
-    fi
-done
-
 NARGS=$#
 if [ $NARGS -eq 0 ]; then
 	print_usage
 	exit 0
 fi
+
+APP_SOURCE=$(realpath /apps)
+if [ "$(basename $APP_SOURCE)" = "202412_build" ]; then
+    APP_DEST=${APP_SOURCE/_build/}
+else
+    if [[ "$APP_SOURCE" == *"_build" ]]; then
+        APP_DEST=$(echo $APP_SOURCE | sed -e 's@weka@gpfs/tardis@' -e 's/_build//')
+    else
+        echo "WARNING: Syncing from YYYYMM to YYYYMM_build should only be done for special cases"
+        APP_DEST="$(echo $APP_SOURCE | sed 's@gpfs/tardis@weka@')"_build
+    fi
+fi
+
+for i in $APP_SOURCE $APP_DEST; do
+    if [ ! -d $i ]; then
+        print_error "Cannot find directory $i. Please update $0."
+    fi
+done
+
+echo "APP_SOURCE = $APP_SOURCE
+APP_DEST = $APP_DEST"
 
 SOFTWARE="software"
 MODFILE="modulefiles"
@@ -37,109 +52,66 @@ MODFILE="modulefiles"
 if [ $NARGS -eq 2 ]; then
     case $1 in
     vendor)
-        SOURCE=/sfs/applications/$1/installation
-        DEST=/sfs/applications/$1/production
-        SOFTWARE_PATH=$SOURCE/$SOFTWARE/$2 
-        SOFTWARE_DEST=$DEST/$SOFTWARE/$2
-        MODFILE_PATH=$SOURCE/$MODFILE/$2.lua
-        MODFILE_DEST=$DEST/$MODFILE/$2.lua
-
-        echo "== Paths"
-        echo "Software source and destination:"
-        echo "$SOFTWARE_PATH"
-        echo "$SOFTWARE_DEST"
-        echo 
-        echo "Module file source and destination:"
-        echo "$MODFILE_PATH"
-        echo "$MODFILE_DEST"
-        echo
-        read -p "== Perform rsync now? [y/N]" realrun
-
-        if [[ ! $realrun =~ ^[Yy]$ ]]; then
-            echo "== No changes performed."
-            exit 0
-        fi
-        echo
-        rsync -av $SOFTWARE_PATH $(dirname $SOFTWARE_DEST)
-        rsync -av $MODFILE_PATH $MODFILE_DEST
-        echo "== Done."
-        exit 0
+        APP_SOURCE=$APP_SOURCE/$1/installation
+        APP_DEST=$APP_DEST/$1/production
+        SOFTWARE_PATH=$SOFTWARE/$2 
+        MODFILE_PATH=$MODFILE/$2.lua
         ;;
     *)
         print_error "invalid category $1."
         ;;
     esac
-fi
-
-# standard module
-EB=$1
-if [ ! -e $EB ]; then
-    print_error "cannot find easyconfig file $1."
-fi
-ml easybuild
-
-set -e
-set -o pipefail
-read -r PREFIX DIR < <(
-    eb -D $1 | grep '\[x\]' | tail -1 | \
-    sed -e 's/^.*module: //' -e 's/)$//' | \
-    awk -F'|' '{print $1,$2}'
-)
-if [ $? -ne 0 ]; then
-    print_error "possible error in module installation."
-fi
-PREFIX="standard/$PREFIX"
-DIR="${DIR/\/./\/}"
-# add '.' for hidden modulefile
-if grep -q "^hidden\s*=\s*True" $EB; then
-    LUA="${DIR/\///.}.lua"
-else
-    LUA="$DIR.lua"
-fi
-
-APP=`dirname $DIR`
-
-BUILD_DIR=$(realpath /apps)
-YYYYMM_build=$(basename $BUILD_DIR)
-echo "BUILD_DIR = $BUILD_DIR"
-
-if [ "$YYYYMM_build" = "202412_build" ]; then
-    PROD_DIR=${BUILD_DIR/_build/}
-else
-    PROD_DIR=$(echo $BUILD_DIR | sed -e 's@weka@gpfs/tardis@' -e 's/_build//')
-fi
-YYYYMM=$(basename $PROD_DIR)
-echo "PROD_DIR = $PROD_DIR"
-
-SOFTWARE_PATH=$BUILD_DIR/$SOFTWARE/$PREFIX/$DIR
-MODFILE_PATH="$BUILD_DIR/$MODFILE/$PREFIX/$LUA"
-
-# may contain uppercase
-APP_EB=$(cat $EB|awk '/^name/ {gsub(/\047/,""); print $3}')
-EB_PATH=$BUILD_DIR/ebscripts/easybuild/easyconfigs/$APP_EB/$EB
-
-echo "== Paths"
-echo "Software source and destination:"
-echo "$SOFTWARE_PATH"
-echo "$PROD_DIR/$SOFTWARE/$PREFIX/$DIR"
-echo 
-echo "Module file source and destination:"
-echo "$MODFILE_PATH"
-echo "$PROD_DIR/$MODFILE/$PREFIX/`dirname $DIR`"
-echo
-echo "Easyconfig source and destination:"
-echo "$EB_PATH"
-echo "$PROD_DIR/ebscripts/easybuild/easyconfigs/$APP_EB/"
-echo
-
-# check paths of software and module file
-for i in $SOFTWARE_PATH $MODFILE_PATH; do
-	if [ ! -e $i ]; then
-        print_error "$i not found."
+elif [ $NARGS -eq 1 ]; then
+# standard module via easyconfig
+    EB=$1
+    if [ ! -e $EB ]; then
+        print_error "cannot find easyconfig file $1."
     fi
-done
+    ml easybuild
 
+    CFGS=$EASYBUILD_REPOSITORYPATH
+    set -e
+    set -o pipefail
+    read -r EB_PATH PREFIX DIR < <(
+        eb -D $1 | awk '/\[x\]/ {gsub(/\)$/,""); print $3, $(NF-2), $NF}' | tail -1
+    )
+    if [ $? -ne 0 ]; then
+        print_error "possible error in module installation."
+    fi
+
+    # e.g. openmpi/5.0.7 under gcc/14.2.0:
+    # PREFIX = standard/compiler/gcc/14.2.0
+    #    LUA = openmpi/5.0.7.lua
+    #    DIR = openmpi/5.0.7
+    #   NAME = openmpi
+    PREFIX="standard/$PREFIX"
+    LUA="$DIR.lua"
+    # remove . from directory for hidden module
+    DIR="${DIR/\/./\/}"
+    NAME=$(dirname $DIR)
+
+    SOFTWARE_PATH=$SOFTWARE/$PREFIX/$DIR
+    MODFILE_PATH="$MODFILE/$PREFIX/$LUA"
+
+    # e.g. OpenMPI-5.0.7-NVHPC-25.3.eb:
+    #    CFGS = /apps/ebscripts/easybuild/easyconfigs
+    # EB_PATH = $CFGS/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
+    #           xxxxxx--->
+    EB_PATH=${EB_PATH:6}
+fi
+
+echo "== Paths
+  Software: $SOFTWARE_PATH
+Modulefile: $MODFILE_PATH
+"
+if [ $NARGS -eq 1 ]; then
+    echo "Easyconfig: $EB_PATH"
+fi
 echo
+
+# check paths
+cd $APP_SOURCE 
+
 read -p "== Perform rsync now? [y/N]" realrun
 
 if [[ ! $realrun =~ ^[Yy]$ ]]; then
@@ -148,14 +120,16 @@ if [[ ! $realrun =~ ^[Yy]$ ]]; then
 fi
 
 echo "== Performing rsync..."
-cd $BUILD_DIR 
-rsync -avR --delete $SOFTWARE/$PREFIX/$DIR $PROD_DIR && \
-rsync -avR $MODFILE/$PREFIX/$LUA  $PROD_DIR && \
-rsync -avR ebscripts/easybuild/easyconfigs/$APP_EB/$EB $PROD_DIR
+rsync -avR --delete $SOFTWARE_PATH $APP_DEST && \
+rsync -avR          $MODFILE_PATH  $APP_DEST && \
+if [ $NARG -eq 1 ]; then
+    rsync -avR ${CFGS:6}/$EB_PATH $APP_DEST
+fi
 
 # check default symlink
-if [ -e $MODFILE/$PREFIX/$APP/default ]; then
-    rsync -avR $MODFILE/$PREFIX/$APP/default $PROD_DIR
+DEFAULT=$MODFILE/$PREFIX/$NAME/default 
+if [ -e $DEFAULT ]; then
+    rsync -avR $DEFAULT $APP_DEST
 fi
 
 echo
