@@ -99,10 +99,11 @@ if [ $NARGS -eq 1 ]; then
     MODFILE_PATH="$MODFILE/$PREFIX/$LUA"
 
     # e.g. OpenMPI-5.0.7-NVHPC-25.3.eb:
-    #    CFGS = /apps/ebscripts/easybuild/easyconfigs
+    # CFGS    = /apps/ebscripts/easybuild/easyconfigs
+    # CFGS:6  = ebscripts/easybuild/easyconfigs
     # EB_PATH = $CFGS/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
-    #           xxxxxx->
-    EB_PATH=${EB_PATH:6}
+    #         ->ebscripts/easybuild/easyconfigs/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
+    EB_PATH=${CFGS:6}/${EB_PATH:6}
 fi
 
 echo "== Paths
@@ -125,7 +126,7 @@ echo "== Performing rsync..."
 rsync -avR --delete $SOFTWARE_PATH $APP_DEST && \
 rsync -avR          $MODFILE_PATH  $APP_DEST && \
 if [ $NARG -eq 1 ]; then
-    rsync -avR ${CFGS:6}/$EB_PATH $APP_DEST
+    rsync -avR $EB_PATH $APP_DEST
 fi
 
 # check default symlink
