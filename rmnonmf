@@ -1,7 +1,8 @@
 #!/bin/bash
 # Remove non-modulefiles
-find /apps/modulefiles -type f ! \( -name '*.lua' -o -name 'default' \)
-echo
+NONMODULES=( $(find /apps/modulefiles -type f ! \( -name '*.lua' -o -name 'default' \)) )
+printf "%s\n" "${NONMODULES[@]}"
+
 read -p "== Remove? [y/N]" yn
 
 if [[ ! $yn =~ ^[Yy]$ ]]; then
@@ -10,6 +11,6 @@ if [[ ! $yn =~ ^[Yy]$ ]]; then
 fi
 
 echo "== Removing..."
-find /apps/modulefiles -type f ! \( -name '*.lua' -o -name 'default' \) -exec rm {} \;
+rm ${NONMODULES[@]}
 
 echo "== Done."
