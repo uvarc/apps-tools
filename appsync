@@ -126,7 +126,7 @@ fi
 echo "== Performing rsync..."
 rsync -avR --delete $SOFTWARE_PATH $APP_DEST && \
 rsync -avR          $MODFILE_PATH  $APP_DEST && \
-if [ $NARG -eq 1 ]; then
+if [ $NARGS -eq 1 ]; then
     rsync -avR $EB_PATH $APP_DEST
 fi
 
