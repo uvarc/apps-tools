@@ -78,7 +78,11 @@ cd $APP_SOURCE
 if [ $NARGS -eq 1 ]; then
     set -e
     set -o pipefail
-    read -r EB_PATH PREFIX DIR < <(eb -D $1 2>/dev/null | awk '/\[x\]/ {gsub(/\)$/,""); print $3, $(NF-2), $NF} ' | tail -1)
+    TMP=$(eb -D $1 2>/dev/null)
+    eval $(echo "$TMP"|grep "^CFGS=")
+    read -r EB PREFIX DIR < <(echo "$TMP"| awk '
+        /\[x\]/ {gsub(/\)$/,""); print $3, $(NF-2), $NF}
+    ' | tail -1)
     if [ $? -ne 0 ]; then
         print_error "possible error in module installation."
     fi
@@ -100,9 +104,7 @@ if [ $NARGS -eq 1 ]; then
     # e.g. OpenMPI-5.0.7-NVHPC-25.3.eb:
     # CFGS    = /apps/ebscripts/easybuild/easyconfigs
     # CFGS:6  = ebscripts/easybuild/easyconfigs
-    # EB_PATH = $CFGS/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
-    #         ->ebscripts/easybuild/easyconfigs/OpenMPI/OpenMPI-5.0.7-NVHPC-25.3.eb
-    EB_PATH=${CFGS:6}/$NAME/${EB_PATH:6}
+    EB_PATH=${CFGS:6}/${EB:6}
 fi
 
 echo "== Paths
