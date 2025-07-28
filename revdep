@@ -13,7 +13,7 @@ DIR=/apps/modulefiles/standard
 N=$((${#DIR}+2))
 
 function find_revdep {
-    RESULT=$(find $DIR -name '*.lua' -exec grep -l "load(\"$1\")" {} \; | cut -c ${N}- | sed 's/.lua$//')
+    RESULT=$(find $DIR -name '*.lua' -exec grep -l -e "load(\"$1\")" -e "depends_on(\"$1\")" {} \; | cut -c ${N}- | sed 's/.lua$//')
     echo "$RESULT"
 }
 
@@ -46,7 +46,9 @@ else
     HEADER=$APP
 fi
 
-RESULT=$(find_revdep $SEARCH)
+find_revdep $SEARCH
+exit
+#RESULT=$(find_revdep $SEARCH)
 
 if [ ! -z "$RESULT" ]; then
     NDEP=$(echo $RESULT|awk '{print NF}')
