@@ -1,0 +1,16 @@
+#!/bin/bash
+# From the EasyBuild module installation log file read the source file path and check the timestamp
+
+DIR=/apps/software/standard
+
+function check {
+    find $1 -maxdepth $2 -name '*.log' -exec sh -c "f=\$(awk '/Found file/ {print \$NF}' {}) && \
+    if [ ! -z \"\$f\" ]; then
+        ls -l \$f
+    fi" \;
+}
+
+cd $DIR
+check core 4
+check compiler 6
+check mpi 8

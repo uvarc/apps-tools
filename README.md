@@ -19,6 +19,7 @@ This repository contains the following Bash scripts:
 - `vendorchown` - Change group ownership for vendor software
 
 ## Apps stack management
+- `checksrc` - Check timestamp of module source files
 - `find_default` - Find default version of compilers and toolchains
 - `find_incomplete_install` - Find potentially incomplete EasyBuild installations
 - `mltest` - Test module load for the entire apps stack
