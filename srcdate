@@ -10,7 +10,7 @@ function check {
         mpi) d=8;;
     esac
     find $1 -maxdepth $d -name '*.log' -exec sh -c "f=\$(awk '/Found file/ {print \$NF}' {}) && \
-    [ -f \"\$f\" ] && ls -l \$f || echo \$f not found" \;
+    [ ! -z \"\$f\" ] && ls -l \$f" \;
 }
 
 cd $DIR
