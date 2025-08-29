@@ -4,18 +4,24 @@
 DIR=/apps/software/standard
 
 function check {
-    find $1 -maxdepth $2 -name '*.log' -exec sh -c "f=\$(awk '/Found file/ {print \$NF}' {}) && \
-    if [ ! -z \"\$f\" ]; then
-        ls -l \$f
-    fi" \;
+    case $1 in 
+        core) d=4;;
+        compiler) d=6;;
+        mpi) d=8;;
+    esac
+    find $1 -maxdepth $d -name '*.log' -exec sh -c "f=\$(awk '/Found file/ {print \$NF}' {}) && \
+    [ -f \"\$f\" ] && ls -l \$f || echo \$f not found" \;
 }
 
 cd $DIR
-echo [core]
-check core 4
-echo
-echo [compiler]
-check compiler 6
-echo
-echo [mpi]
-check mpi 8
+
+if [ $# -eq 1 ]; then
+    check $1
+    exit
+fi
+
+for i in core compiler mpi; do
+    echo [$i]
+    check $i
+    echo
+done
