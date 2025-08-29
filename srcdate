@@ -10,7 +10,7 @@ function check {
         mpi) d=8;;
     esac
     find $1 -maxdepth $d -name '*.log' -exec sh -c "f=\$(awk '/Found file/ {print \$NF}' {}) && \
-    [ ! -z \"\$f\" ] && ls -l --time-style=+%Y%m%d \$f" \;
+    [ ! -z \"\$f\" ] && ls -l --time-style=+%Y%m%d \$f" \; | sort -nrk 6
 }
 
 cd $DIR
@@ -22,6 +22,6 @@ fi
 
 for i in core compiler mpi; do
     echo [$i]
-    check $i | sort -nrk 6
+    check $i
     echo
 done
