@@ -11,6 +11,11 @@ function check {
 }
 
 cd $DIR
+echo [core]
 check core 4
+echo
+echo [compiler]
 check compiler 6
+echo
+echo [mpi]
 check mpi 8
