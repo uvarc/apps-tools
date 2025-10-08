@@ -17,7 +17,7 @@ STACK1=$1
 STACK2=$2
 
 DIR=~/tree/${STACK1}-${STACK2}
-mkdir $DIR || true
+mkdir -p $DIR || true
 
 function stack_diff {
     CATEGORY=$1
@@ -25,8 +25,18 @@ function stack_diff {
     TREE1=tree-${STACK1}-${CATEGORY}.txt
     TREE2=tree-${STACK2}-${CATEGORY}.txt
     TREE12=tree-${STACK1}-${STACK2}-${CATEGORY}.txt
-    APPDIR1=/sfs/applications/$STACK1/software/standard
-    APPDIR2=/sfs/applications/$STACK2/software/standard
+    if [[ "$STACK1" == *"_build" ]]; then
+        FS1="weka/"
+    else
+        FS1="gpfs/tardis/"
+    fi
+    APPDIR1=/sfs/$FS1/applications/$STACK1/software/standard
+    if [[ "$STACK2" == *"_build" ]]; then
+        FS2="weka/"
+    else
+        FS2="gpfs/tardis/"
+    fi
+    APPDIR2=/sfs/$FS2/applications/$STACK2/software/standard
 
     cd $APPDIR1/$CATEGORY
     tree -df -L $DEPTH . | sed 's/^.....//' > $DIR/$TREE1
