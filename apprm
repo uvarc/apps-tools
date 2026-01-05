@@ -222,6 +222,12 @@ for YYYYMM in $YYYYMMs; do
             rm $VERSION.*
         fi
         recursive_rmdir
+
+# rm default if exists
+        if [[ -L default && $(readlink default) = "$VERSION.lua" ]]; then
+            echo "Removing default symlink"
+            rm default
+        fi
     else
         echo "$MODFILE_PATH does not exist"
     fi
