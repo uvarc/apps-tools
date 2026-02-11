@@ -5,7 +5,8 @@
 
 function print_usage {
 	echo "Usage: `basename $0` EASYCONFIG"
-	echo "Usage: `basename $0` vendor NAME/VERSION"
+	echo "       `basename $0` core easybuild/VERSION"
+	echo "       `basename $0` vendor NAME/VERSION"
 }
 
 function print_error {
@@ -59,6 +60,14 @@ if [ $NARGS -eq 2 ]; then
         APP_DEST=$(dirname $APP_DEST)/$1/production
         SOFTWARE_PATH=$SOFTWARE/$2 
         MODFILE_PATH=$MODFILE/$2.lua
+        ;;
+    core)
+        # only for EasyBuild
+        if [[ ! $2 == "easybuild/"* ]]; then
+            print_error "You can only sync the easybuild module."
+        fi
+        SOFTWARE_PATH=$SOFTWARE/standard/$1/$2
+        MODFILE_PATH=$MODFILE/standard/$1/$2.lua
         ;;
     *)
         print_error "invalid category $1."
