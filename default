@@ -44,11 +44,11 @@ fi
 #    LUA = openmpi/5.0.7.lua
 LUA="$DIR.lua"
 MODFILE_PATH="$MODFILE/$PREFIX/$LUA"
-MODFILE_DIR=$(dirname $MODFILE_PATH)
+MODFILE_DIR="/apps/$(dirname $MODFILE_PATH)"
 
 # list all existing versions
 cd $MODFILE_DIR
-ls *.lua|sed 's/.lua//g'
+ls -a *.lua|sed 's/.lua//g'
 if [ -e default ]; then
     echo "default -> $(readlink default)"
 fi
@@ -69,5 +69,5 @@ if [ $DEFAULT -eq 0 ]; then
     fi
 else
     echo "Setting default -> $DEFAULT"
-    ln -sf $2.lua default
+    ln -sf $LUA default
 fi
