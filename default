@@ -48,30 +48,32 @@ MODFILE_DIR="/apps/$(dirname $MODFILE_PATH)"
 
 # list all existing versions
 cd $MODFILE_DIR
+echo "Existing versions:"
+ls -a *.lua|sed 's/.lua//g'|sort -V
 if [ -e default ]; then
     echo "default -> $(readlink default)"
 fi
-ls -a *.lua|sed 's/.lua//g'|sort -V
 
 if [ $# -eq 1 ]; then
     exit 0
 fi
 
 DEFAULT=$2
-if [ $DEFAULT -eq 0 ]; then
+echo
+if [ $DEFAULT = "0" ]; then
     if [ -e default ]; then
         echo "Removing default symlink"
         rm default
         exit 0
     else
-        echo "No default symlink exists"
+        echo "Error: No default symlink exists"
         exit 1
     fi
 else
+    echo "Setting default -> $DEFAULT"
     if [ ! -e $DEFAULT.lua ]; then
-        echo "$DEFAULT.lua not found"
+        echo "Error: $DEFAULT.lua not found"
         exit 1
     fi
-    echo "Setting default -> $DEFAULT"
     ln -sf $DEFAULT.lua default
 fi
