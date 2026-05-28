@@ -29,20 +29,14 @@ ml easybuild
 read -r CFGS MODFILE SOFTWARE < <(
     eb --show-config|awk '/^repository/ {print $4} /^subdir-modules/ {print $4} /^subdir-software/ {print $4}'|tr '\n' ' '
 )
-MODFILE=$(echo $MODFILE|sed 's@/.*$@@')
-SOFTWARE=$(echo $SOFTWARE|sed 's@/.*$@@')
 
 # determine source and destination for /apps
 APP_SOURCE=$(realpath /apps)
-if [ "$(basename $APP_SOURCE)" = "202412_build" ]; then
-    APP_DEST=${APP_SOURCE/_build/}
+if [[ "$APP_SOURCE" == *"_build" ]]; then
+    APP_DEST=$(echo $APP_SOURCE | sed -e 's@weka@gpfs/tardis@' -e 's/_build//')
 else
-    if [[ "$APP_SOURCE" == *"_build" ]]; then
-        APP_DEST=$(echo $APP_SOURCE | sed -e 's@weka@gpfs/tardis@' -e 's/_build//')
-    else
-        echo "WARNING: Syncing from YYYYMM to YYYYMM_build should only be done for special cases"
-        APP_DEST="$(echo $APP_SOURCE | sed 's@gpfs/tardis@weka@')"_build
-    fi
+    echo "WARNING: Syncing from YYYYMM to YYYYMM_build should only be done for special cases"
+    APP_DEST="$(echo $APP_SOURCE | sed 's@gpfs/tardis@weka@')"_build
 fi
 
 for i in $APP_SOURCE $APP_DEST; do
@@ -58,16 +52,16 @@ if [ $NARGS -eq 2 ]; then
     vendor)
         APP_SOURCE=$(dirname $APP_SOURCE)/$1/installation
         APP_DEST=$(dirname $APP_DEST)/$1/production
-        SOFTWARE_PATH=$SOFTWARE/$2 
-        MODFILE_PATH=$MODFILE/$2.lua
+        SOFTWARE_PATH=$(dirname $SOFTWARE)/$2 
+        MODFILE_PATH=$(dirname $MODFILE)/$2.lua
         ;;
     core)
         # only for EasyBuild
         if [[ ! $2 == "easybuild/"* ]]; then
             print_error "You can only sync the easybuild module."
         fi
-        SOFTWARE_PATH=$SOFTWARE/standard/$1/$2
-        MODFILE_PATH=$MODFILE/standard/$1/$2.lua
+        SOFTWARE_PATH=$SOFTWARE/$1/$2
+        MODFILE_PATH=$MODFILE/$1/$2.lua
         ;;
     *)
         print_error "invalid category $1."
@@ -85,8 +79,7 @@ cd $APP_SOURCE
 
 # standard module via easyconfig
 if [ $NARGS -eq 1 ]; then
-    set -e
-    set -o pipefail
+    set -euo pipefail
     TMP=$(eb -D $1 2>/dev/null)
     eval $(echo "$TMP"|grep "^CFGS=")
     read -r EB PREFIX DIR < <(echo "$TMP"| awk '
@@ -97,11 +90,10 @@ if [ $NARGS -eq 1 ]; then
     fi
 
     # e.g. openmpi/5.0.7 under gcc/14.2.0:
-    # PREFIX = standard/compiler/gcc/14.2.0
+    # PREFIX = compiler/gcc/14.2.0
     #    LUA = openmpi/5.0.7.lua
     #    DIR = openmpi/5.0.7
     #   NAME = openmpi
-    PREFIX="standard/$PREFIX"
     LUA="$DIR.lua"
     # remove . from directory for hidden module
     DIR="${DIR/\/./\/}"
