@@ -4,8 +4,8 @@
 
 function print_usage {
 	echo "Usage: `basename $0` EASYCONFIG [DEFAULT_VERSION]"
-    echo "If DEFAULT_VERSION is empty: only print info"
-    echo "Else:"
+    echo "if DEFAULT_VERSION is empty: list versions only"
+    echo "else:"
     echo "    if DEFAULT_VERSION is 0: remove default symlink"
     echo "    else: set symlink 'default -> DEFAULT_VERSION'"
 }
@@ -27,7 +27,7 @@ fi
 
 # directory name for modulefile
 ml easybuild
-MODFILE=$(eb --show-config|awk '/^subdir-modules/ {print $4}')
+MODFILE=$(eb --show-config 2>/dev/null|awk '/^subdir-modules/ {print $4}')
 
 set -euo pipefail
 TMP=$(eb -D $1 2>/dev/null)
@@ -48,10 +48,10 @@ MODFILE_DIR="/apps/$(dirname $MODFILE_PATH)"
 
 # list all existing versions
 cd $MODFILE_DIR
-ls -a *.lua|sed 's/.lua//g'
 if [ -e default ]; then
     echo "default -> $(readlink default)"
 fi
+ls -a *.lua|sed 's/.lua//g'|sort -V
 
 if [ $# -eq 1 ]; then
     exit 0
@@ -68,6 +68,10 @@ if [ $DEFAULT -eq 0 ]; then
         exit 1
     fi
 else
+    if [ ! -e $DEFAULT.lua ]; then
+        echo "$DEFAULT.lua not found"
+        exit 1
+    fi
     echo "Setting default -> $DEFAULT"
-    ln -sf $LUA default
+    ln -sf $DEFAULT.lua default
 fi
