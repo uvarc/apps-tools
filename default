@@ -1,0 +1,73 @@
+#!/bin/bash
+# get/set default version of a module
+# Ruoshi Sun
+
+function print_usage {
+	echo "Usage: `basename $0` EASYCONFIG [DEFAULT_VERSION]"
+    echo "If DEFAULT_VERSION is empty: only print info"
+    echo "Else:"
+    echo "    if DEFAULT_VERSION is 0: remove default symlink"
+    echo "    else: set symlink 'default -> DEFAULT_VERSION'"
+}
+
+function print_error {
+	RED='\e[1;31m'
+	NC='\e[m'
+	echo -e "${RED}Error: $1${NC}"
+	echo
+	print_usage
+	exit 1
+}
+
+NARGS=$#
+if [ $NARGS -eq 0 ]; then
+	print_usage
+	exit 0
+fi
+
+# directory name for modulefile
+ml easybuild
+MODFILE=$(eb --show-config|awk '/^subdir-modules/ {print $4}')
+
+set -euo pipefail
+TMP=$(eb -D $1 2>/dev/null)
+eval $(echo "$TMP"|grep "^CFGS=")
+read -r PREFIX DIR < <(echo "$TMP"| awk '
+    /\[x\]/ {gsub(/\)$/,""); print $(NF-2), $NF}
+' | tail -1)
+if [ $? -ne 0 ]; then
+    print_error "possible error in module installation."
+fi
+
+# e.g. openmpi/5.0.7 under gcc/14.2.0:
+# PREFIX = compiler/gcc/14.2.0
+#    LUA = openmpi/5.0.7.lua
+LUA="$DIR.lua"
+MODFILE_PATH="$MODFILE/$PREFIX/$LUA"
+MODFILE_DIR=$(dirname $MODFILE_PATH)
+
+# list all existing versions
+cd $MODFILE_DIR
+ls *.lua|sed 's/.lua//g'
+if [ -e default ]; then
+    echo "default -> $(readlink default)"
+fi
+
+if [ $# -eq 1 ]; then
+    exit 0
+fi
+
+DEFAULT=$2
+if [ $DEFAULT -eq 0 ]; then
+    if [ -e default ]; then
+        echo "Removing default symlink"
+        rm default
+        exit 0
+    else
+        echo "No default symlink exists"
+        exit 1
+    fi
+else
+    echo "Setting default -> $DEFAULT"
+    ln -sf $2.lua default
+fi
