@@ -94,7 +94,7 @@ if [ $NARGS -eq 1 ]; then
     #    LUA = openmpi/5.0.7.lua
     #    DIR = openmpi/5.0.7
     #   NAME = openmpi
-    if grep -q ModuleRC $1; then
+    if grep -q ModuleRC $CFGS/$1; then
         LUA=".modulerc.lua"
     else
         LUA="$DIR.lua"
