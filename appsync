@@ -94,7 +94,11 @@ if [ $NARGS -eq 1 ]; then
     #    LUA = openmpi/5.0.7.lua
     #    DIR = openmpi/5.0.7
     #   NAME = openmpi
-    LUA="$DIR.lua"
+    if grep -q ModuleRC $1; then
+        LUA=".modulerc.lua"
+    else
+        LUA="$DIR.lua"
+    fi
     # remove . from directory for hidden module
     DIR="${DIR/\/./\/}"
     NAME=$(dirname $DIR)
